@@ -12,15 +12,6 @@ param dailyQuotaGb int = -1
 
 // Sentinel connectors / subscription-level sources
 param enableAzureActivity bool = true
-// Azure Activity for ALL subscriptions under a management group (Azure Policy, tenant-scope deployment)
-param enableActivityPolicy bool = false
-param managementGroupId string = ''
-
-// Entra ID logs (tenant-scope deployment)
-param enableEntraSignInLogs bool = false
-param enableEntraAuditLogs bool = false
-param enableEntraRiskLogs bool = false
-param enableEntraGraphLogs bool = false
 param enableDefenderXdr bool = false
 param enableDefenderXdrAlerts bool = false
 param enableDefenderForCloud bool = false
@@ -73,12 +64,6 @@ var activityCategories = [
   'Autoscale'
   'ResourceHealth'
 ]
-
-var entraSignIn = enableEntraSignInLogs ? [ 'SignInLogs', 'NonInteractiveUserSignInLogs', 'ServicePrincipalSignInLogs', 'ManagedIdentitySignInLogs' ] : []
-var entraAudit = enableEntraAuditLogs ? [ 'AuditLogs', 'ProvisioningLogs' ] : []
-var entraRisk = enableEntraRiskLogs ? [ 'RiskyUsers', 'UserRiskEvents', 'RiskyServicePrincipals', 'ServicePrincipalRiskEvents' ] : []
-var entraGraph = enableEntraGraphLogs ? [ 'MicrosoftGraphActivityLogs' ] : []
-var entraCategories = concat(entraSignIn, entraAudit, entraRisk, entraGraph)
 
 var selectedResourceSources = concat(
   enableKeyVaultLogs ? [ { key: 'keyvault', label: 'Key Vault', resourceType: 'Microsoft.KeyVault/vaults' } ] : [],
@@ -143,21 +128,6 @@ resource activityDiag 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview'
       category: c
       enabled: true
     }]
-  }
-}
-
-// Entra ID logs and management-group Azure Activity: tenant-scope deployment
-module tenantScope 'tenant-scope.bicep' = if (!empty(entraCategories) || enableActivityPolicy) {
-  name: 'sentinel-tenant-scope'
-  scope: tenant()
-  params: {
-    location: location
-    workspaceId: sentinel.outputs.workspaceId
-    subscriptionId: subscription().subscriptionId
-    resourceGroupName: resourceGroupName
-    entraCategories: entraCategories
-    enableActivityPolicy: enableActivityPolicy
-    managementGroupId: managementGroupId
   }
 }
 

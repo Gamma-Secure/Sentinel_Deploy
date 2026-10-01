@@ -1,0 +1,135 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/0.1.2-preview/CreateUIDefinition.MultiVm.json#",
+  "handler": "Microsoft.Azure.CreateUIDef",
+  "version": "0.1.2-preview",
+  "parameters": {
+    "basics": [
+      {
+        "name": "intro",
+        "type": "Microsoft.Common.InfoBox",
+        "visible": true,
+        "options": {
+          "icon": "Warning",
+          "text": "Tenant add-ons for an existing Sentinel workspace: Entra ID logs and Azure Activity for a management group. Deploy the core template first. The person deploying needs Owner at the tenant root (\"/\") and, for Entra logs, Global or Security Administrator. A Global Administrator can enable 'Access management for Azure resources' in Entra properties and grant themselves Owner at \"/\" for the deployment."
+        }
+      }
+    ],
+    "steps": [
+      {
+        "name": "target",
+        "label": "Workspace",
+        "elements": [
+          {
+            "name": "resourceGroupName",
+            "type": "Microsoft.Common.TextBox",
+            "label": "Resource group of the Sentinel workspace",
+            "defaultValue": "rg-sentinel-prod",
+            "visible": true,
+            "constraints": {
+              "required": true,
+              "regex": "^[a-zA-Z0-9._()-]{1,90}$",
+              "validationMessage": "1-90 chars: letters, numbers, . _ ( ) -"
+            }
+          },
+          {
+            "name": "workspaceName",
+            "type": "Microsoft.Common.TextBox",
+            "label": "Log Analytics workspace name",
+            "defaultValue": "law-sentinel-prod",
+            "visible": true,
+            "constraints": {
+              "required": true,
+              "regex": "^[a-zA-Z0-9][a-zA-Z0-9-]{2,61}[a-zA-Z0-9]$",
+              "validationMessage": "4-63 chars: letters, numbers, hyphens"
+            }
+          }
+        ]
+      },
+      {
+        "name": "entra",
+        "label": "Entra ID logs",
+        "elements": [
+          {
+            "name": "eNote",
+            "type": "Microsoft.Common.InfoBox",
+            "visible": true,
+            "options": {
+              "icon": "Info",
+              "text": "Creates a tenant-level diagnostic setting sending the chosen Entra logs to the workspace. Sign-in logs need Entra ID P1 or P2."
+            }
+          },
+          {
+            "name": "enableEntraSignInLogs",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Sign-in logs (interactive, non-interactive, service principal, managed identity)",
+            "defaultValue": true
+          },
+          {
+            "name": "enableEntraAuditLogs",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Audit and provisioning logs",
+            "defaultValue": true
+          },
+          {
+            "name": "enableEntraRiskLogs",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Identity Protection risk logs (risky users, risk events)",
+            "defaultValue": false,
+            "toolTip": "Needs Entra ID P2."
+          },
+          {
+            "name": "enableEntraGraphLogs",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Microsoft Graph activity logs",
+            "defaultValue": false,
+            "toolTip": "High volume. Enable deliberately."
+          }
+        ]
+      },
+      {
+        "name": "activity",
+        "label": "Azure Activity",
+        "elements": [
+          {
+            "name": "enableActivityPolicy",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Azure Activity for all subscriptions under a management group (policy)",
+            "defaultValue": false
+          },
+          {
+            "name": "managementGroupId",
+            "type": "Microsoft.Common.TextBox",
+            "label": "Management group ID",
+            "defaultValue": "",
+            "visible": "[steps('activity').enableActivityPolicy]",
+            "constraints": {
+              "required": true,
+              "regex": "^[a-zA-Z0-9._()-]{1,90}$",
+              "validationMessage": "1-90 chars: letters, numbers, . _ ( ) -"
+            }
+          },
+          {
+            "name": "aNote",
+            "type": "Microsoft.Common.InfoBox",
+            "visible": "[steps('activity').enableActivityPolicy]",
+            "options": {
+              "icon": "Info",
+              "text": "Deploys a DeployIfNotExists policy at the management group. New subscriptions are covered automatically; for existing ones run a remediation task: az policy remediation create -n activity-fix --management-group <id> --policy-assignment sentinel-activity-logs. If the core template already enabled Azure Activity for a subscription in this group, delete its sentinel-activity-logs diagnostic setting to avoid duplicate ingestion."
+            }
+          }
+        ]
+      }
+    ],
+    "outputs": {
+      "location": "[location()]",
+      "resourceGroupName": "[steps('target').resourceGroupName]",
+      "workspaceName": "[steps('target').workspaceName]",
+      "enableEntraSignInLogs": "[steps('entra').enableEntraSignInLogs]",
+      "enableEntraAuditLogs": "[steps('entra').enableEntraAuditLogs]",
+      "enableEntraRiskLogs": "[steps('entra').enableEntraRiskLogs]",
+      "enableEntraGraphLogs": "[steps('entra').enableEntraGraphLogs]",
+      "enableActivityPolicy": "[steps('activity').enableActivityPolicy]",
+      "managementGroupId": "[if(steps('activity').enableActivityPolicy, steps('activity').managementGroupId, '')]"
+    }
+  }
+}

@@ -1,0 +1,381 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.47.16.16243",
+      "templateHash": "9623951020510132486"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string"
+    },
+    "resourceGroupName": {
+      "type": "string"
+    },
+    "workspaceName": {
+      "type": "string"
+    },
+    "enableEntraSignInLogs": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "enableEntraAuditLogs": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "enableEntraRiskLogs": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "enableEntraGraphLogs": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "enableActivityPolicy": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "managementGroupId": {
+      "type": "string",
+      "defaultValue": ""
+    }
+  },
+  "variables": {
+    "entraSignIn": "[if(parameters('enableEntraSignInLogs'), createArray('SignInLogs', 'NonInteractiveUserSignInLogs', 'ServicePrincipalSignInLogs', 'ManagedIdentitySignInLogs'), createArray())]",
+    "entraAudit": "[if(parameters('enableEntraAuditLogs'), createArray('AuditLogs', 'ProvisioningLogs'), createArray())]",
+    "entraRisk": "[if(parameters('enableEntraRiskLogs'), createArray('RiskyUsers', 'UserRiskEvents', 'RiskyServicePrincipals', 'ServicePrincipalRiskEvents'), createArray())]",
+    "entraGraph": "[if(parameters('enableEntraGraphLogs'), createArray('MicrosoftGraphActivityLogs'), createArray())]",
+    "entraCategories": "[concat(variables('entraSignIn'), variables('entraAudit'), variables('entraRisk'), variables('entraGraph'))]"
+  },
+  "resources": [
+    {
+      "condition": "[or(not(empty(variables('entraCategories'))), parameters('enableActivityPolicy'))]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "sentinel-tenant-scope",
+      "scope": "/",
+      "location": "[deployment().location]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "workspaceId": {
+            "value": "[resourceId(subscription().subscriptionId, parameters('resourceGroupName'), 'Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]"
+          },
+          "subscriptionId": {
+            "value": "[subscription().subscriptionId]"
+          },
+          "resourceGroupName": {
+            "value": "[parameters('resourceGroupName')]"
+          },
+          "entraCategories": {
+            "value": "[variables('entraCategories')]"
+          },
+          "enableActivityPolicy": {
+            "value": "[parameters('enableActivityPolicy')]"
+          },
+          "managementGroupId": {
+            "value": "[parameters('managementGroupId')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-08-01/tenantDeploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.47.16.16243",
+              "templateHash": "3647985805143566417"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string"
+            },
+            "workspaceId": {
+              "type": "string"
+            },
+            "subscriptionId": {
+              "type": "string"
+            },
+            "resourceGroupName": {
+              "type": "string"
+            },
+            "entraCategories": {
+              "type": "array"
+            },
+            "enableActivityPolicy": {
+              "type": "bool"
+            },
+            "managementGroupId": {
+              "type": "string"
+            }
+          },
+          "resources": [
+            {
+              "condition": "[not(empty(parameters('entraCategories')))]",
+              "type": "microsoft.aadiam/diagnosticSettings",
+              "apiVersion": "2017-04-01",
+              "name": "sentinel-entra-logs",
+              "properties": {
+                "copy": [
+                  {
+                    "name": "logs",
+                    "count": "[length(parameters('entraCategories'))]",
+                    "input": {
+                      "category": "[parameters('entraCategories')[copyIndex('logs')]]",
+                      "enabled": true
+                    }
+                  }
+                ],
+                "workspaceId": "[parameters('workspaceId')]"
+              }
+            },
+            {
+              "condition": "[parameters('enableActivityPolicy')]",
+              "type": "Microsoft.Resources/deployments",
+              "apiVersion": "2025-04-01",
+              "name": "sentinel-activity-policy",
+              "scope": "[format('Microsoft.Management/managementGroups/{0}', parameters('managementGroupId'))]",
+              "location": "[deployment().location]",
+              "properties": {
+                "expressionEvaluationOptions": {
+                  "scope": "inner"
+                },
+                "mode": "Incremental",
+                "parameters": {
+                  "location": {
+                    "value": "[parameters('location')]"
+                  },
+                  "workspaceId": {
+                    "value": "[parameters('workspaceId')]"
+                  }
+                },
+                "template": {
+                  "$schema": "https://schema.management.azure.com/schemas/2019-08-01/managementGroupDeploymentTemplate.json#",
+                  "contentVersion": "1.0.0.0",
+                  "metadata": {
+                    "_generator": {
+                      "name": "bicep",
+                      "version": "0.47.16.16243",
+                      "templateHash": "8665663601427448690"
+                    }
+                  },
+                  "parameters": {
+                    "location": {
+                      "type": "string"
+                    },
+                    "workspaceId": {
+                      "type": "string"
+                    }
+                  },
+                  "variables": {
+                    "settingName": "setByPolicy-SentinelActivity",
+                    "monitoringContributor": "749f88d5-cbae-40b8-bcfc-e573ddc772fa",
+                    "activityCategories": [
+                      "Administrative",
+                      "Security",
+                      "ServiceHealth",
+                      "Alert",
+                      "Recommendation",
+                      "Policy",
+                      "Autoscale",
+                      "ResourceHealth"
+                    ]
+                  },
+                  "resources": [
+                    {
+                      "type": "Microsoft.Authorization/policyDefinitions",
+                      "apiVersion": "2023-04-01",
+                      "name": "sentinel-activity-logs",
+                      "properties": {
+                        "displayName": "Sentinel: send subscription Activity Log to Log Analytics",
+                        "policyType": "Custom",
+                        "mode": "All",
+                        "parameters": {
+                          "logAnalytics": {
+                            "type": "String",
+                            "metadata": {
+                              "displayName": "Log Analytics workspace resource ID"
+                            }
+                          }
+                        },
+                        "policyRule": {
+                          "if": {
+                            "field": "type",
+                            "equals": "Microsoft.Resources/subscriptions"
+                          },
+                          "then": {
+                            "effect": "deployIfNotExists",
+                            "details": {
+                              "type": "Microsoft.Insights/diagnosticSettings",
+                              "name": "[variables('settingName')]",
+                              "deploymentScope": "subscription",
+                              "existenceScope": "subscription",
+                              "existenceCondition": {
+                                "field": "Microsoft.Insights/diagnosticSettings/workspaceId",
+                                "equals": "[[parameters('logAnalytics')]"
+                              },
+                              "roleDefinitionIds": [
+                                "[format('/providers/Microsoft.Authorization/roleDefinitions/{0}', variables('monitoringContributor'))]"
+                              ],
+                              "deployment": {
+                                "location": "[parameters('location')]",
+                                "properties": {
+                                  "mode": "incremental",
+                                  "template": {
+                                    "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+                                    "contentVersion": "1.0.0.0",
+                                    "parameters": {
+                                      "logAnalytics": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "resources": [
+                                      {
+                                        "type": "Microsoft.Insights/diagnosticSettings",
+                                        "apiVersion": "2021-05-01-preview",
+                                        "name": "[variables('settingName')]",
+                                        "properties": {
+                                          "copy": [
+                                            {
+                                              "name": "logs",
+                                              "count": "[length(variables('activityCategories'))]",
+                                              "input": {
+                                                "category": "[variables('activityCategories')[copyIndex('logs')]]",
+                                                "enabled": true
+                                              }
+                                            }
+                                          ],
+                                          "workspaceId": "[[parameters('logAnalytics')]"
+                                        }
+                                      }
+                                    ]
+                                  },
+                                  "parameters": {
+                                    "logAnalytics": {
+                                      "value": "[[parameters('logAnalytics')]"
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "type": "Microsoft.Authorization/policyAssignments",
+                      "apiVersion": "2024-04-01",
+                      "name": "sentinel-activity-logs",
+                      "location": "[parameters('location')]",
+                      "identity": {
+                        "type": "SystemAssigned"
+                      },
+                      "properties": {
+                        "displayName": "Sentinel: subscription Activity Log to Log Analytics",
+                        "policyDefinitionId": "[extensionResourceId(managementGroup().id, 'Microsoft.Authorization/policyDefinitions', 'sentinel-activity-logs')]",
+                        "parameters": {
+                          "logAnalytics": {
+                            "value": "[parameters('workspaceId')]"
+                          }
+                        }
+                      },
+                      "dependsOn": [
+                        "[extensionResourceId(managementGroup().id, 'Microsoft.Authorization/policyDefinitions', 'sentinel-activity-logs')]"
+                      ]
+                    },
+                    {
+                      "type": "Microsoft.Authorization/roleAssignments",
+                      "apiVersion": "2022-04-01",
+                      "name": "[guid(managementGroup().id, 'sentinel-activity-logs', variables('monitoringContributor'))]",
+                      "properties": {
+                        "roleDefinitionId": "[tenantResourceId('Microsoft.Authorization/roleDefinitions', variables('monitoringContributor'))]",
+                        "principalId": "[reference(extensionResourceId(managementGroup().id, 'Microsoft.Authorization/policyAssignments', 'sentinel-activity-logs'), '2024-04-01', 'full').identity.principalId]",
+                        "principalType": "ServicePrincipal"
+                      },
+                      "dependsOn": [
+                        "[extensionResourceId(managementGroup().id, 'Microsoft.Authorization/policyAssignments', 'sentinel-activity-logs')]"
+                      ]
+                    }
+                  ],
+                  "outputs": {
+                    "principalId": {
+                      "type": "string",
+                      "value": "[reference(extensionResourceId(managementGroup().id, 'Microsoft.Authorization/policyAssignments', 'sentinel-activity-logs'), '2024-04-01', 'full').identity.principalId]"
+                    },
+                    "assignmentName": {
+                      "type": "string",
+                      "value": "sentinel-activity-logs"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "condition": "[parameters('enableActivityPolicy')]",
+              "type": "Microsoft.Resources/deployments",
+              "apiVersion": "2025-04-01",
+              "name": "sentinel-activity-policy-workspace-role",
+              "subscriptionId": "[parameters('subscriptionId')]",
+              "resourceGroup": "[parameters('resourceGroupName')]",
+              "properties": {
+                "expressionEvaluationOptions": {
+                  "scope": "inner"
+                },
+                "mode": "Incremental",
+                "parameters": {
+                  "principalId": {
+                    "value": "[reference(extensionResourceId(tenantResourceId('Microsoft.Management/managementGroups', parameters('managementGroupId')), 'Microsoft.Resources/deployments', 'sentinel-activity-policy'), '2025-04-01').outputs.principalId.value]"
+                  }
+                },
+                "template": {
+                  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                  "contentVersion": "1.0.0.0",
+                  "metadata": {
+                    "_generator": {
+                      "name": "bicep",
+                      "version": "0.47.16.16243",
+                      "templateHash": "10979228128526893092"
+                    }
+                  },
+                  "parameters": {
+                    "principalId": {
+                      "type": "string"
+                    }
+                  },
+                  "variables": {
+                    "logAnalyticsContributor": "92aaf0da-9dab-42b6-94a3-d43ce8d16293"
+                  },
+                  "resources": [
+                    {
+                      "type": "Microsoft.Authorization/roleAssignments",
+                      "apiVersion": "2022-04-01",
+                      "name": "[guid(resourceGroup().id, parameters('principalId'), variables('logAnalyticsContributor'))]",
+                      "properties": {
+                        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('logAnalyticsContributor'))]",
+                        "principalId": "[parameters('principalId')]",
+                        "principalType": "ServicePrincipal"
+                      }
+                    }
+                  ]
+                }
+              },
+              "dependsOn": [
+                "[extensionResourceId(tenantResourceId('Microsoft.Management/managementGroups', parameters('managementGroupId')), 'Microsoft.Resources/deployments', 'sentinel-activity-policy')]"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
