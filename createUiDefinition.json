@@ -224,8 +224,17 @@
           {
             "name": "enableAzureActivity",
             "type": "Microsoft.Common.CheckBox",
-            "label": "Azure Activity (subscription activity log)",
+            "label": "Azure Activity (this subscription's activity log)",
             "defaultValue": true
+          },
+          {
+            "name": "activityMgNote",
+            "type": "Microsoft.Common.InfoBox",
+            "visible": true,
+            "options": {
+              "icon": "Info",
+              "text": "To collect Azure Activity from every subscription under a management group, leave this ticked only if this is your single subscription, and run enable-activity-policy.sh after deployment (needs Owner at the management group). Don't use both for the same subscription, or the logs are ingested twice."
+            }
           },
           {
             "name": "aNote",
