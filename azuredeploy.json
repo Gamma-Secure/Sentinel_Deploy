@@ -1,0 +1,293 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.47.16.16243",
+      "templateHash": "2527329190167896251"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "Region for the resource group and workspace"
+      }
+    },
+    "resourceGroupName": {
+      "type": "string"
+    },
+    "workspaceName": {
+      "type": "string"
+    },
+    "retentionInDays": {
+      "type": "int",
+      "defaultValue": 90,
+      "minValue": 30,
+      "maxValue": 730
+    },
+    "dailyQuotaGb": {
+      "type": "int",
+      "defaultValue": -1,
+      "metadata": {
+        "description": "Daily ingestion cap in GB. -1 = no cap"
+      }
+    },
+    "enableAzureActivity": {
+      "type": "bool",
+      "defaultValue": true
+    },
+    "enableDefenderForCloud": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "enableEntraIdProtection": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "enableDefenderXdr": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {}
+    }
+  },
+  "variables": {
+    "activityCategories": [
+      "Administrative",
+      "Security",
+      "ServiceHealth",
+      "Alert",
+      "Recommendation",
+      "Policy",
+      "Autoscale",
+      "ResourceHealth"
+    ]
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/resourceGroups",
+      "apiVersion": "2024-03-01",
+      "name": "[parameters('resourceGroupName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]"
+    },
+    {
+      "condition": "[parameters('enableAzureActivity')]",
+      "type": "Microsoft.Insights/diagnosticSettings",
+      "apiVersion": "2021-05-01-preview",
+      "name": "sentinel-activity-logs",
+      "properties": {
+        "copy": [
+          {
+            "name": "logs",
+            "count": "[length(variables('activityCategories'))]",
+            "input": {
+              "category": "[variables('activityCategories')[copyIndex('logs')]]",
+              "enabled": true
+            }
+          }
+        ],
+        "workspaceId": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'sentinel-core'), '2025-04-01').outputs.workspaceId.value]"
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'sentinel-core')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "sentinel-core",
+      "resourceGroup": "[parameters('resourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "workspaceName": {
+            "value": "[parameters('workspaceName')]"
+          },
+          "retentionInDays": {
+            "value": "[parameters('retentionInDays')]"
+          },
+          "dailyQuotaGb": {
+            "value": "[parameters('dailyQuotaGb')]"
+          },
+          "tenantId": {
+            "value": "[tenant().tenantId]"
+          },
+          "subscriptionId": {
+            "value": "[subscription().subscriptionId]"
+          },
+          "enableDefenderForCloud": {
+            "value": "[parameters('enableDefenderForCloud')]"
+          },
+          "enableEntraIdProtection": {
+            "value": "[parameters('enableEntraIdProtection')]"
+          },
+          "enableDefenderXdr": {
+            "value": "[parameters('enableDefenderXdr')]"
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.47.16.16243",
+              "templateHash": "1851866975785575104"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string"
+            },
+            "workspaceName": {
+              "type": "string"
+            },
+            "retentionInDays": {
+              "type": "int"
+            },
+            "dailyQuotaGb": {
+              "type": "int"
+            },
+            "tenantId": {
+              "type": "string"
+            },
+            "subscriptionId": {
+              "type": "string"
+            },
+            "enableDefenderForCloud": {
+              "type": "bool"
+            },
+            "enableEntraIdProtection": {
+              "type": "bool"
+            },
+            "enableDefenderXdr": {
+              "type": "bool"
+            },
+            "tags": {
+              "type": "object"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.OperationalInsights/workspaces",
+              "apiVersion": "2023-09-01",
+              "name": "[parameters('workspaceName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "sku": {
+                  "name": "PerGB2018"
+                },
+                "retentionInDays": "[parameters('retentionInDays')]",
+                "workspaceCapping": "[if(greater(parameters('dailyQuotaGb'), 0), createObject('dailyQuotaGb', parameters('dailyQuotaGb')), null())]"
+              }
+            },
+            {
+              "type": "Microsoft.SecurityInsights/onboardingStates",
+              "apiVersion": "2024-03-01",
+              "scope": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+              "name": "default",
+              "properties": {},
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]"
+              ]
+            },
+            {
+              "condition": "[parameters('enableDefenderForCloud')]",
+              "type": "Microsoft.SecurityInsights/dataConnectors",
+              "apiVersion": "2024-03-01",
+              "scope": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+              "name": "[guid(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'AzureSecurityCenter')]",
+              "kind": "AzureSecurityCenter",
+              "properties": {
+                "subscriptionId": "[parameters('subscriptionId')]",
+                "dataTypes": {
+                  "alerts": {
+                    "state": "Enabled"
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+                "[extensionResourceId(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'Microsoft.SecurityInsights/onboardingStates', 'default')]"
+              ]
+            },
+            {
+              "condition": "[parameters('enableEntraIdProtection')]",
+              "type": "Microsoft.SecurityInsights/dataConnectors",
+              "apiVersion": "2024-03-01",
+              "scope": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+              "name": "[guid(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'AzureActiveDirectory')]",
+              "kind": "AzureActiveDirectory",
+              "properties": {
+                "tenantId": "[parameters('tenantId')]",
+                "dataTypes": {
+                  "alerts": {
+                    "state": "Enabled"
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+                "[extensionResourceId(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'Microsoft.SecurityInsights/onboardingStates', 'default')]"
+              ]
+            },
+            {
+              "condition": "[parameters('enableDefenderXdr')]",
+              "type": "Microsoft.SecurityInsights/dataConnectors",
+              "apiVersion": "2024-03-01",
+              "scope": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+              "name": "[guid(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'MicrosoftThreatProtection')]",
+              "kind": "MicrosoftThreatProtection",
+              "properties": {
+                "tenantId": "[parameters('tenantId')]",
+                "dataTypes": {
+                  "incidents": {
+                    "state": "Enabled"
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+                "[extensionResourceId(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'Microsoft.SecurityInsights/onboardingStates', 'default')]"
+              ]
+            }
+          ],
+          "outputs": {
+            "workspaceId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('resourceGroupName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "workspaceId": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'sentinel-core'), '2025-04-01').outputs.workspaceId.value]"
+    },
+    "workspaceName": {
+      "type": "string",
+      "value": "[parameters('workspaceName')]"
+    }
+  }
+}
