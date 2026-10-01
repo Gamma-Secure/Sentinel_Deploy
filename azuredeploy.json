@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.47.16.16243",
-      "templateHash": "607069648311607598"
+      "templateHash": "18090301338456680091"
     }
   },
   "parameters": {
@@ -111,7 +111,45 @@
     "entraRisk": "[if(parameters('enableEntraRiskLogs'), createArray('RiskyUsers', 'UserRiskEvents', 'RiskyServicePrincipals', 'ServicePrincipalRiskEvents'), createArray())]",
     "entraGraph": "[if(parameters('enableEntraGraphLogs'), createArray('MicrosoftGraphActivityLogs'), createArray())]",
     "entraCategories": "[concat(variables('entraSignIn'), variables('entraAudit'), variables('entraRisk'), variables('entraGraph'))]",
-    "selectedResourceSources": "[concat(if(parameters('enableKeyVaultLogs'), createArray(createObject('key', 'keyvault', 'label', 'Key Vault', 'resourceType', 'Microsoft.KeyVault/vaults')), createArray()), if(parameters('enableNsgLogs'), createArray(createObject('key', 'nsg', 'label', 'Network Security Group', 'resourceType', 'Microsoft.Network/networkSecurityGroups')), createArray()), if(parameters('enableFirewallLogs'), createArray(createObject('key', 'firewall', 'label', 'Azure Firewall', 'resourceType', 'Microsoft.Network/azureFirewalls')), createArray()), if(parameters('enableAppGatewayLogs'), createArray(createObject('key', 'appgw', 'label', 'Application Gateway / WAF', 'resourceType', 'Microsoft.Network/applicationGateways')), createArray()), if(parameters('enableAksLogs'), createArray(createObject('key', 'aks', 'label', 'AKS', 'resourceType', 'Microsoft.ContainerService/managedClusters')), createArray()), if(parameters('enableAppServiceLogs'), createArray(createObject('key', 'appservice', 'label', 'App Service', 'resourceType', 'Microsoft.Web/sites')), createArray()))]"
+    "allResourceSources": [
+      {
+        "enabled": "[parameters('enableKeyVaultLogs')]",
+        "key": "keyvault",
+        "label": "Key Vault",
+        "resourceType": "Microsoft.KeyVault/vaults"
+      },
+      {
+        "enabled": "[parameters('enableNsgLogs')]",
+        "key": "nsg",
+        "label": "Network Security Group",
+        "resourceType": "Microsoft.Network/networkSecurityGroups"
+      },
+      {
+        "enabled": "[parameters('enableFirewallLogs')]",
+        "key": "firewall",
+        "label": "Azure Firewall",
+        "resourceType": "Microsoft.Network/azureFirewalls"
+      },
+      {
+        "enabled": "[parameters('enableAppGatewayLogs')]",
+        "key": "appgw",
+        "label": "Application Gateway / WAF",
+        "resourceType": "Microsoft.Network/applicationGateways"
+      },
+      {
+        "enabled": "[parameters('enableAksLogs')]",
+        "key": "aks",
+        "label": "AKS",
+        "resourceType": "Microsoft.ContainerService/managedClusters"
+      },
+      {
+        "enabled": "[parameters('enableAppServiceLogs')]",
+        "key": "appservice",
+        "label": "App Service",
+        "resourceType": "Microsoft.Web/sites"
+      }
+    ],
+    "selectedResourceSources": "[filter(variables('allResourceSources'), lambda('s', lambdaVariables('s').enabled))]"
   },
   "resources": [
     {
@@ -243,15 +281,13 @@
               }
             },
             {
-            "type": "Microsoft.SecurityInsights/onboardingStates",
-            "apiVersion": "2022-11-01",
-            "scope": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
-            "name": "default",
-            "properties": {
-              "customerManagedKey": false
-                  },
+              "type": "Microsoft.SecurityInsights/onboardingStates",
+              "apiVersion": "2024-03-01",
+              "scope": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+              "name": "default",
+              "properties": {},
               "dependsOn": [
-        "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]"
+                "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]"
               ]
             },
             {
@@ -297,7 +333,7 @@
             {
               "condition": "[parameters('enableDefenderXdr')]",
               "type": "Microsoft.SecurityInsights/dataConnectors",
-              "apiVersion": "2023-02-01-preview",
+              "apiVersion": "2024-03-01",
               "scope": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
               "name": "[guid(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'MicrosoftThreatProtection')]",
               "kind": "MicrosoftThreatProtection",
@@ -618,6 +654,10 @@
     "workspaceName": {
       "type": "string",
       "value": "[parameters('workspaceName')]"
+    },
+    "policyAssignmentNames": {
+      "type": "array",
+      "value": "[coalesce(tryGet(if(not(empty(variables('selectedResourceSources'))), reference(subscriptionResourceId('Microsoft.Resources/deployments', 'sentinel-resource-diagnostics'), '2025-04-01'), null()), 'outputs', 'assignmentNames', 'value'), createArray())]"
     }
   }
 }
