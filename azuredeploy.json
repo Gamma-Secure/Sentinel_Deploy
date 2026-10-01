@@ -1,255 +1,621 @@
 {
-  "$schema": "https://schema.management.azure.com/schemas/0.1.2-preview/CreateUIDefinition.MultiVm.json#",
-  "handler": "Microsoft.Azure.CreateUIDef",
-  "version": "0.1.2-preview",
+  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.47.16.16243",
+      "templateHash": "607069648311607598"
+    }
+  },
   "parameters": {
-    "basics": [
-      {
-        "name": "intro",
-        "type": "Microsoft.Common.InfoBox",
-        "visible": true,
-        "options": {
-          "icon": "Info",
-          "text": "Deploys a Log Analytics workspace, onboards Microsoft Sentinel and enables the data sources you pick. Needs Owner (or Contributor + User Access Admin) on the subscription."
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "Region for the resource group and workspace"
+      }
+    },
+    "resourceGroupName": {
+      "type": "string"
+    },
+    "workspaceName": {
+      "type": "string"
+    },
+    "retentionInDays": {
+      "type": "int",
+      "defaultValue": 90,
+      "minValue": 30,
+      "maxValue": 730
+    },
+    "dailyQuotaGb": {
+      "type": "int",
+      "defaultValue": -1,
+      "metadata": {
+        "description": "Daily ingestion cap in GB. -1 = no cap"
+      }
+    },
+    "enableAzureActivity": {
+      "type": "bool",
+      "defaultValue": true
+    },
+    "enableDefenderForCloud": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "enableEntraIdProtection": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "enableDefenderXdr": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "enableEntraSignInLogs": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "enableEntraAuditLogs": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "enableEntraRiskLogs": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "enableEntraGraphLogs": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "enableKeyVaultLogs": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "enableNsgLogs": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "enableFirewallLogs": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "enableAppGatewayLogs": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "enableAksLogs": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "enableAppServiceLogs": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {}
+    }
+  },
+  "variables": {
+    "activityCategories": [
+      "Administrative",
+      "Security",
+      "ServiceHealth",
+      "Alert",
+      "Recommendation",
+      "Policy",
+      "Autoscale",
+      "ResourceHealth"
+    ],
+    "entraSignIn": "[if(parameters('enableEntraSignInLogs'), createArray('SignInLogs', 'NonInteractiveUserSignInLogs', 'ServicePrincipalSignInLogs', 'ManagedIdentitySignInLogs'), createArray())]",
+    "entraAudit": "[if(parameters('enableEntraAuditLogs'), createArray('AuditLogs', 'ProvisioningLogs'), createArray())]",
+    "entraRisk": "[if(parameters('enableEntraRiskLogs'), createArray('RiskyUsers', 'UserRiskEvents', 'RiskyServicePrincipals', 'ServicePrincipalRiskEvents'), createArray())]",
+    "entraGraph": "[if(parameters('enableEntraGraphLogs'), createArray('MicrosoftGraphActivityLogs'), createArray())]",
+    "entraCategories": "[concat(variables('entraSignIn'), variables('entraAudit'), variables('entraRisk'), variables('entraGraph'))]",
+    "selectedResourceSources": "[concat(if(parameters('enableKeyVaultLogs'), createArray(createObject('key', 'keyvault', 'label', 'Key Vault', 'resourceType', 'Microsoft.KeyVault/vaults')), createArray()), if(parameters('enableNsgLogs'), createArray(createObject('key', 'nsg', 'label', 'Network Security Group', 'resourceType', 'Microsoft.Network/networkSecurityGroups')), createArray()), if(parameters('enableFirewallLogs'), createArray(createObject('key', 'firewall', 'label', 'Azure Firewall', 'resourceType', 'Microsoft.Network/azureFirewalls')), createArray()), if(parameters('enableAppGatewayLogs'), createArray(createObject('key', 'appgw', 'label', 'Application Gateway / WAF', 'resourceType', 'Microsoft.Network/applicationGateways')), createArray()), if(parameters('enableAksLogs'), createArray(createObject('key', 'aks', 'label', 'AKS', 'resourceType', 'Microsoft.ContainerService/managedClusters')), createArray()), if(parameters('enableAppServiceLogs'), createArray(createObject('key', 'appservice', 'label', 'App Service', 'resourceType', 'Microsoft.Web/sites')), createArray()))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/resourceGroups",
+      "apiVersion": "2024-03-01",
+      "name": "[parameters('resourceGroupName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]"
+    },
+    {
+      "condition": "[parameters('enableAzureActivity')]",
+      "type": "Microsoft.Insights/diagnosticSettings",
+      "apiVersion": "2021-05-01-preview",
+      "name": "sentinel-activity-logs",
+      "properties": {
+        "copy": [
+          {
+            "name": "logs",
+            "count": "[length(variables('activityCategories'))]",
+            "input": {
+              "category": "[variables('activityCategories')[copyIndex('logs')]]",
+              "enabled": true
+            }
+          }
+        ],
+        "workspaceId": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'sentinel-core'), '2025-04-01').outputs.workspaceId.value]"
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'sentinel-core')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "sentinel-core",
+      "resourceGroup": "[parameters('resourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "workspaceName": {
+            "value": "[parameters('workspaceName')]"
+          },
+          "retentionInDays": {
+            "value": "[parameters('retentionInDays')]"
+          },
+          "dailyQuotaGb": {
+            "value": "[parameters('dailyQuotaGb')]"
+          },
+          "tenantId": {
+            "value": "[tenant().tenantId]"
+          },
+          "subscriptionId": {
+            "value": "[subscription().subscriptionId]"
+          },
+          "enableDefenderForCloud": {
+            "value": "[parameters('enableDefenderForCloud')]"
+          },
+          "enableEntraIdProtection": {
+            "value": "[parameters('enableEntraIdProtection')]"
+          },
+          "enableDefenderXdr": {
+            "value": "[parameters('enableDefenderXdr')]"
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.47.16.16243",
+              "templateHash": "1851866975785575104"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string"
+            },
+            "workspaceName": {
+              "type": "string"
+            },
+            "retentionInDays": {
+              "type": "int"
+            },
+            "dailyQuotaGb": {
+              "type": "int"
+            },
+            "tenantId": {
+              "type": "string"
+            },
+            "subscriptionId": {
+              "type": "string"
+            },
+            "enableDefenderForCloud": {
+              "type": "bool"
+            },
+            "enableEntraIdProtection": {
+              "type": "bool"
+            },
+            "enableDefenderXdr": {
+              "type": "bool"
+            },
+            "tags": {
+              "type": "object"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.OperationalInsights/workspaces",
+              "apiVersion": "2023-09-01",
+              "name": "[parameters('workspaceName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "sku": {
+                  "name": "PerGB2018"
+                },
+                "retentionInDays": "[parameters('retentionInDays')]",
+                "workspaceCapping": "[if(greater(parameters('dailyQuotaGb'), 0), createObject('dailyQuotaGb', parameters('dailyQuotaGb')), null())]"
+              }
+            },
+            {
+              "type": "Microsoft.SecurityInsights/onboardingStates",
+              "apiVersion": "2024-03-01",
+              "scope": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+              "name": "default",
+              "properties": {},
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]"
+              ]
+            },
+            {
+              "condition": "[parameters('enableDefenderForCloud')]",
+              "type": "Microsoft.SecurityInsights/dataConnectors",
+              "apiVersion": "2024-03-01",
+              "scope": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+              "name": "[guid(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'AzureSecurityCenter')]",
+              "kind": "AzureSecurityCenter",
+              "properties": {
+                "subscriptionId": "[parameters('subscriptionId')]",
+                "dataTypes": {
+                  "alerts": {
+                    "state": "Enabled"
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+                "[extensionResourceId(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'Microsoft.SecurityInsights/onboardingStates', 'default')]"
+              ]
+            },
+            {
+              "condition": "[parameters('enableEntraIdProtection')]",
+              "type": "Microsoft.SecurityInsights/dataConnectors",
+              "apiVersion": "2024-03-01",
+              "scope": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+              "name": "[guid(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'AzureActiveDirectory')]",
+              "kind": "AzureActiveDirectory",
+              "properties": {
+                "tenantId": "[parameters('tenantId')]",
+                "dataTypes": {
+                  "alerts": {
+                    "state": "Enabled"
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+                "[extensionResourceId(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'Microsoft.SecurityInsights/onboardingStates', 'default')]"
+              ]
+            },
+            {
+              "condition": "[parameters('enableDefenderXdr')]",
+              "type": "Microsoft.SecurityInsights/dataConnectors",
+              "apiVersion": "2024-03-01",
+              "scope": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+              "name": "[guid(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'MicrosoftThreatProtection')]",
+              "kind": "MicrosoftThreatProtection",
+              "properties": {
+                "tenantId": "[parameters('tenantId')]",
+                "dataTypes": {
+                  "incidents": {
+                    "state": "Enabled"
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+                "[extensionResourceId(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'Microsoft.SecurityInsights/onboardingStates', 'default')]"
+              ]
+            }
+          ],
+          "outputs": {
+            "workspaceId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]"
+            }
+          }
         }
-      }
-    ],
-    "steps": [
-      {
-        "name": "workspace",
-        "label": "Workspace",
-        "elements": [
-          {
-            "name": "resourceGroupName",
-            "type": "Microsoft.Common.TextBox",
-            "label": "Resource group name",
-            "defaultValue": "rg-sentinel-prod",
-            "constraints": {
-              "required": true,
-              "regex": "^[a-zA-Z0-9._()-]{1,90}$",
-              "validationMessage": "1-90 chars: letters, numbers, . _ ( ) -"
+      },
+      "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('resourceGroupName'))]"
+      ]
+    },
+    {
+      "condition": "[not(empty(variables('entraCategories')))]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "sentinel-entra-diagnostics",
+      "scope": "/",
+      "location": "[deployment().location]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "workspaceId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'sentinel-core'), '2025-04-01').outputs.workspaceId.value]"
+          },
+          "categories": {
+            "value": "[variables('entraCategories')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-08-01/tenantDeploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.47.16.16243",
+              "templateHash": "2145477407892355751"
             }
           },
-          {
-            "name": "workspaceName",
-            "type": "Microsoft.Common.TextBox",
-            "label": "Workspace name",
-            "defaultValue": "law-sentinel-prod",
-            "constraints": {
-              "required": true,
-              "regex": "^[a-zA-Z0-9][a-zA-Z0-9-]{2,61}[a-zA-Z0-9]$",
-              "validationMessage": "4-63 chars: letters, numbers, hyphens"
-            }
-          },
-          {
-            "name": "retention",
-            "type": "Microsoft.Common.DropDown",
-            "label": "Retention (days)",
-            "defaultValue": "90",
-            "toolTip": "First 90 days are free with Sentinel; beyond that is billed.",
-            "constraints": {
-              "required": true,
-              "allowedValues": [
-                {
-                  "label": "30",
-                  "value": 30
-                },
-                {
-                  "label": "90",
-                  "value": 90
-                },
-                {
-                  "label": "180",
-                  "value": 180
-                },
-                {
-                  "label": "365",
-                  "value": 365
-                },
-                {
-                  "label": "730",
-                  "value": 730
-                }
+          "parameters": {
+            "workspaceId": {
+              "type": "string"
+            },
+            "categories": {
+              "type": "array",
+              "defaultValue": [
+                "SignInLogs",
+                "AuditLogs",
+                "NonInteractiveUserSignInLogs",
+                "ServicePrincipalSignInLogs",
+                "ManagedIdentitySignInLogs",
+                "ProvisioningLogs"
               ]
             }
           },
-          {
-            "name": "dailyCap",
-            "type": "Microsoft.Common.DropDown",
-            "label": "Daily ingestion cap (GB)",
-            "defaultValue": "No cap",
-            "toolTip": "A cap stops ingestion (and detection) when hit. Use with care outside of dev/demo.",
-            "constraints": {
-              "required": true,
-              "allowedValues": [
-                {
-                  "label": "No cap",
-                  "value": -1
+          "resources": [
+            {
+              "type": "microsoft.aadiam/diagnosticSettings",
+              "apiVersion": "2017-04-01",
+              "name": "sentinel-entra-logs",
+              "properties": {
+                "copy": [
+                  {
+                    "name": "logs",
+                    "count": "[length(parameters('categories'))]",
+                    "input": {
+                      "category": "[parameters('categories')[copyIndex('logs')]]",
+                      "enabled": true
+                    }
+                  }
+                ],
+                "workspaceId": "[parameters('workspaceId')]"
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'sentinel-core')]"
+      ]
+    },
+    {
+      "condition": "[not(empty(variables('selectedResourceSources')))]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "sentinel-resource-diagnostics",
+      "location": "[deployment().location]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "workspaceId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'sentinel-core'), '2025-04-01').outputs.workspaceId.value]"
+          },
+          "sources": {
+            "value": "[variables('selectedResourceSources')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.47.16.16243",
+              "templateHash": "16939346574362201061"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string"
+            },
+            "workspaceId": {
+              "type": "string"
+            },
+            "sources": {
+              "type": "array",
+              "metadata": {
+                "description": "Array of { key, label, resourceType }"
+              }
+            }
+          },
+          "variables": {
+            "roleIds": [
+              "749f88d5-cbae-40b8-bcfc-e573ddc772fa",
+              "92aaf0da-9dab-42b6-94a3-d43ce8d16293"
+            ],
+            "settingName": "setByPolicy-Sentinel"
+          },
+          "resources": [
+            {
+              "copy": {
+                "name": "defs",
+                "count": "[length(parameters('sources'))]"
+              },
+              "type": "Microsoft.Authorization/policyDefinitions",
+              "apiVersion": "2023-04-01",
+              "name": "[format('sentinel-diag-{0}', parameters('sources')[copyIndex()].key)]",
+              "properties": {
+                "displayName": "[format('Sentinel: send {0} resource logs to Log Analytics', parameters('sources')[copyIndex()].label)]",
+                "policyType": "Custom",
+                "mode": "Indexed",
+                "parameters": {
+                  "logAnalytics": {
+                    "type": "String",
+                    "metadata": {
+                      "displayName": "Log Analytics workspace resource ID"
+                    }
+                  }
                 },
-                {
-                  "label": "1",
-                  "value": 1
-                },
-                {
-                  "label": "5",
-                  "value": 5
-                },
-                {
-                  "label": "10",
-                  "value": 10
-                },
-                {
-                  "label": "50",
-                  "value": 50
+                "policyRule": {
+                  "if": {
+                    "field": "type",
+                    "equals": "[parameters('sources')[copyIndex()].resourceType]"
+                  },
+                  "then": {
+                    "effect": "deployIfNotExists",
+                    "details": {
+                      "copy": [
+                        {
+                          "name": "roleDefinitionIds",
+                          "count": "[length(variables('roleIds'))]",
+                          "input": "[format('/providers/Microsoft.Authorization/roleDefinitions/{0}', variables('roleIds')[copyIndex('roleDefinitionIds')])]"
+                        }
+                      ],
+                      "type": "Microsoft.Insights/diagnosticSettings",
+                      "name": "[variables('settingName')]",
+                      "existenceCondition": {
+                        "allOf": [
+                          {
+                            "field": "Microsoft.Insights/diagnosticSettings/workspaceId",
+                            "equals": "[[parameters('logAnalytics')]"
+                          }
+                        ]
+                      },
+                      "deployment": {
+                        "properties": {
+                          "mode": "incremental",
+                          "template": {
+                            "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                            "contentVersion": "1.0.0.0",
+                            "parameters": {
+                              "resourceName": {
+                                "type": "string"
+                              },
+                              "location": {
+                                "type": "string"
+                              },
+                              "logAnalytics": {
+                                "type": "string"
+                              }
+                            },
+                            "resources": [
+                              {
+                                "type": "[format('{0}/providers/diagnosticSettings', parameters('sources')[copyIndex()].resourceType)]",
+                                "apiVersion": "2021-05-01-preview",
+                                "name": "[format('[concat(parameters(''resourceName''), ''/Microsoft.Insights/{0}'')]', variables('settingName'))]",
+                                "location": "[[parameters('location')]",
+                                "properties": {
+                                  "workspaceId": "[[parameters('logAnalytics')]",
+                                  "logs": [
+                                    {
+                                      "categoryGroup": "allLogs",
+                                      "enabled": true
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          },
+                          "parameters": {
+                            "resourceName": {
+                              "value": "[[field('name')]"
+                            },
+                            "location": {
+                              "value": "[[field('location')]"
+                            },
+                            "logAnalytics": {
+                              "value": "[[parameters('logAnalytics')]"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
                 }
+              }
+            },
+            {
+              "copy": {
+                "name": "assigns",
+                "count": "[length(parameters('sources'))]"
+              },
+              "type": "Microsoft.Authorization/policyAssignments",
+              "apiVersion": "2024-04-01",
+              "name": "[format('sentinel-diag-{0}', parameters('sources')[copyIndex()].key)]",
+              "location": "[parameters('location')]",
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "properties": {
+                "displayName": "[format('Sentinel: {0} logs to Log Analytics', parameters('sources')[copyIndex()].label)]",
+                "policyDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/policyDefinitions', format('sentinel-diag-{0}', parameters('sources')[copyIndex()].key))]",
+                "parameters": {
+                  "logAnalytics": {
+                    "value": "[parameters('workspaceId')]"
+                  }
+                }
+              },
+              "dependsOn": [
+                "[subscriptionResourceId('Microsoft.Authorization/policyDefinitions', format('sentinel-diag-{0}', parameters('sources')[copyIndex()].key))]"
+              ]
+            },
+            {
+              "copy": {
+                "name": "roles",
+                "count": "[length(range(0, mul(length(parameters('sources')), 2)))]"
+              },
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[guid(subscription().id, parameters('sources')[div(range(0, mul(length(parameters('sources')), 2))[copyIndex()], 2)].key, variables('roleIds')[mod(range(0, mul(length(parameters('sources')), 2))[copyIndex()], 2)])]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('roleIds')[mod(range(0, mul(length(parameters('sources')), 2))[copyIndex()], 2)])]",
+                "principalId": "[reference(subscriptionResourceId('Microsoft.Authorization/policyAssignments', format('sentinel-diag-{0}', parameters('sources')[div(range(0, mul(length(parameters('sources')), 2))[copyIndex()], 2)].key)), '2024-04-01', 'full').identity.principalId]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[subscriptionResourceId('Microsoft.Authorization/policyAssignments', format('sentinel-diag-{0}', parameters('sources')[div(range(0, mul(length(parameters('sources')), 2))[copyIndex()], 2)].key))]"
               ]
             }
-          }
-        ]
-      },
-      {
-        "name": "sources",
-        "label": "Data sources",
-        "elements": [
-          {
-            "name": "enableAzureActivity",
-            "type": "Microsoft.Common.CheckBox",
-            "label": "Azure Activity (subscription activity log)",
-            "defaultValue": true
-          },
-          {
-            "name": "enableDefenderForCloud",
-            "type": "Microsoft.Common.CheckBox",
-            "label": "Microsoft Defender for Cloud (alerts)",
-            "defaultValue": false
-          },
-          {
-            "name": "enableEntraIdProtection",
-            "type": "Microsoft.Common.CheckBox",
-            "label": "Entra ID Protection (alerts)",
-            "defaultValue": false
-          },
-          {
-            "name": "enableDefenderXdr",
-            "type": "Microsoft.Common.CheckBox",
-            "label": "Microsoft Defender XDR (incidents)",
-            "defaultValue": false
-          }
-        ]
-      },
-      {
-        "name": "entra",
-        "label": "Entra ID logs",
-        "elements": [
-          {
-            "name": "entraNote",
-            "type": "Microsoft.Common.InfoBox",
-            "visible": true,
-            "options": {
-              "icon": "Warning",
-              "text": "Creates a tenant-level diagnostic setting. The person deploying needs Global Administrator or Security Administrator in Entra, and sign-in logs need Entra ID P1 or P2. If you lack this, untick everything on this page and enable it later."
+          ],
+          "outputs": {
+            "assignmentNames": {
+              "type": "array",
+              "copy": {
+                "count": "[length(parameters('sources'))]",
+                "input": "[format('sentinel-diag-{0}', parameters('sources')[copyIndex()].key)]"
+              }
             }
-          },
-          {
-            "name": "enableEntraSignInLogs",
-            "type": "Microsoft.Common.CheckBox",
-            "label": "Sign-in logs (interactive, non-interactive, service principal, managed identity)",
-            "defaultValue": true
-          },
-          {
-            "name": "enableEntraAuditLogs",
-            "type": "Microsoft.Common.CheckBox",
-            "label": "Audit and provisioning logs",
-            "defaultValue": true
-          },
-          {
-            "name": "enableEntraRiskLogs",
-            "type": "Microsoft.Common.CheckBox",
-            "label": "Identity Protection risk logs (risky users, risk events)",
-            "defaultValue": false,
-            "toolTip": "Needs Entra ID P2."
-          },
-          {
-            "name": "enableEntraGraphLogs",
-            "type": "Microsoft.Common.CheckBox",
-            "label": "Microsoft Graph activity logs",
-            "defaultValue": false,
-            "toolTip": "High volume. Enable deliberately."
           }
-        ]
+        }
       },
-      {
-        "name": "resources",
-        "label": "Azure resource logs",
-        "elements": [
-          {
-            "name": "resNote",
-            "type": "Microsoft.Common.InfoBox",
-            "visible": true,
-            "options": {
-              "icon": "Info",
-              "text": "Each option deploys an Azure Policy (DeployIfNotExists) at subscription scope that adds a diagnostic setting to every matching resource, now and in future. Existing resources are only fixed after a policy remediation task is run. Logs land in AzureDiagnostics or resource-specific tables. All log categories are sent, which can be costly for NSGs and Firewalls."
-            }
-          },
-          {
-            "name": "enableKeyVaultLogs",
-            "type": "Microsoft.Common.CheckBox",
-            "label": "Key Vault",
-            "defaultValue": false
-          },
-          {
-            "name": "enableNsgLogs",
-            "type": "Microsoft.Common.CheckBox",
-            "label": "Network Security Groups",
-            "defaultValue": false
-          },
-          {
-            "name": "enableFirewallLogs",
-            "type": "Microsoft.Common.CheckBox",
-            "label": "Azure Firewall",
-            "defaultValue": false
-          },
-          {
-            "name": "enableAppGatewayLogs",
-            "type": "Microsoft.Common.CheckBox",
-            "label": "Application Gateway / WAF",
-            "defaultValue": false
-          },
-          {
-            "name": "enableAksLogs",
-            "type": "Microsoft.Common.CheckBox",
-            "label": "Azure Kubernetes Service (AKS)",
-            "defaultValue": false
-          },
-          {
-            "name": "enableAppServiceLogs",
-            "type": "Microsoft.Common.CheckBox",
-            "label": "App Service",
-            "defaultValue": false
-          }
-        ]
-      }
-    ],
-    "outputs": {
-      "location": "[location()]",
-      "resourceGroupName": "[steps('workspace').resourceGroupName]",
-      "workspaceName": "[steps('workspace').workspaceName]",
-      "retentionInDays": "[steps('workspace').retention]",
-      "dailyQuotaGb": "[steps('workspace').dailyCap]",
-      "enableAzureActivity": "[steps('sources').enableAzureActivity]",
-      "enableDefenderForCloud": "[steps('sources').enableDefenderForCloud]",
-      "enableEntraIdProtection": "[steps('sources').enableEntraIdProtection]",
-      "enableDefenderXdr": "[steps('sources').enableDefenderXdr]",
-      "enableEntraSignInLogs": "[steps('entra').enableEntraSignInLogs]",
-      "enableEntraAuditLogs": "[steps('entra').enableEntraAuditLogs]",
-      "enableEntraRiskLogs": "[steps('entra').enableEntraRiskLogs]",
-      "enableEntraGraphLogs": "[steps('entra').enableEntraGraphLogs]",
-      "enableKeyVaultLogs": "[steps('resources').enableKeyVaultLogs]",
-      "enableNsgLogs": "[steps('resources').enableNsgLogs]",
-      "enableFirewallLogs": "[steps('resources').enableFirewallLogs]",
-      "enableAppGatewayLogs": "[steps('resources').enableAppGatewayLogs]",
-      "enableAksLogs": "[steps('resources').enableAksLogs]",
-      "enableAppServiceLogs": "[steps('resources').enableAppServiceLogs]"
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'sentinel-core')]"
+      ]
+    }
+  ],
+  "outputs": {
+    "workspaceId": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'sentinel-core'), '2025-04-01').outputs.workspaceId.value]"
+    },
+    "workspaceName": {
+      "type": "string",
+      "value": "[parameters('workspaceName')]"
     }
   }
 }
