@@ -10,7 +10,7 @@
         "visible": true,
         "options": {
           "icon": "Info",
-          "text": "Deploys a Log Analytics workspace, onboards Microsoft Sentinel and enables the data sources you pick. Needs Owner (or Contributor + User Access Administrator) on the subscription."
+          "text": "Deploys a Log Analytics workspace, onboards Microsoft Sentinel and enables the data sources you pick on the following tabs. Needs Owner (or Contributor + User Access Administrator) on the subscription."
         }
       }
     ],
@@ -46,6 +46,7 @@
             "type": "Microsoft.Common.DropDown",
             "label": "Retention (days)",
             "defaultValue": "90",
+            "toolTip": "First 90 days are free with Sentinel; beyond that is billed.",
             "constraints": {
               "required": true,
               "allowedValues": [
@@ -77,7 +78,7 @@
             "type": "Microsoft.Common.DropDown",
             "label": "Daily ingestion cap (GB)",
             "defaultValue": "No cap",
-            "toolTip": "A cap stops ingestion when hit.",
+            "toolTip": "A cap stops ingestion (and detection) when hit. Use with care outside of dev/demo.",
             "constraints": {
               "required": true,
               "allowedValues": [
@@ -107,47 +108,94 @@
         ]
       },
       {
-        "name": "sources",
-        "label": "Microsoft security",
+        "name": "defender",
+        "label": "Microsoft Defender",
         "elements": [
           {
-            "name": "enableAzureActivity",
-            "type": "Microsoft.Common.CheckBox",
-            "label": "Azure Activity (subscription activity log)",
-            "defaultValue": true
-          },
-          {
-            "name": "enableDefenderForCloud",
-            "type": "Microsoft.Common.CheckBox",
-            "label": "Microsoft Defender for Cloud (alerts)",
-            "defaultValue": false
-          },
-          {
-            "name": "enableEntraIdProtection",
-            "type": "Microsoft.Common.CheckBox",
-            "label": "Entra ID Protection (alerts)",
-            "defaultValue": false
+            "name": "dNote",
+            "type": "Microsoft.Common.InfoBox",
+            "visible": true,
+            "options": {
+              "icon": "Info",
+              "text": "Defender XDR already brings in incidents (and the alerts behind them) from Defender for Endpoint, Identity, Office 365 and Cloud Apps. If you tick XDR, you normally don't need the individual connectors below. If your workspace is onboarded to the unified Defender portal, check the connector state there after deployment."
+            }
           },
           {
             "name": "enableDefenderXdr",
             "type": "Microsoft.Common.CheckBox",
             "label": "Microsoft Defender XDR (incidents)",
+            "defaultValue": false,
+            "toolTip": "Uses a preview Sentinel API version. Needs Global or Security Administrator."
+          },
+          {
+            "name": "dWarn",
+            "type": "Microsoft.Common.InfoBox",
+            "visible": "[and(steps('defender').enableDefenderXdr, or(steps('defender').enableDefenderForCloudApps, steps('defender').enableDefenderForIdentity, steps('defender').enableDefenderForOffice365, steps('defender').enableDefenderForEndpoint))]",
+            "options": {
+              "icon": "Warning",
+              "text": "XDR is ticked together with individual Defender connectors. This usually creates duplicate incidents."
+            }
+          },
+          {
+            "name": "enableDefenderForCloud",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Microsoft Defender for Cloud (alerts, this subscription)",
+            "defaultValue": false,
+            "toolTip": "Needs Security Reader on the subscription."
+          },
+          {
+            "name": "enableDefenderForIdentity",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Microsoft Defender for Identity (alerts)",
             "defaultValue": false
+          },
+          {
+            "name": "enableDefenderForCloudApps",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Microsoft Defender for Cloud Apps (alerts)",
+            "defaultValue": false
+          },
+          {
+            "name": "enableDefenderForCloudAppsDiscovery",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Include Cloud Apps Cloud Discovery logs",
+            "defaultValue": false,
+            "visible": "[steps('defender').enableDefenderForCloudApps]"
+          },
+          {
+            "name": "enableDefenderForOffice365",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Microsoft Defender for Office 365 (alerts)",
+            "defaultValue": false,
+            "toolTip": "Uses a preview Sentinel API version."
+          },
+          {
+            "name": "enableDefenderForEndpoint",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Microsoft Defender for Endpoint (alerts, legacy connector)",
+            "defaultValue": false,
+            "toolTip": "Superseded by Defender XDR."
           }
         ]
       },
       {
         "name": "entra",
-        "label": "Entra ID logs",
+        "label": "Entra ID",
         "elements": [
           {
-            "name": "entraNote",
+            "name": "eNote",
             "type": "Microsoft.Common.InfoBox",
             "visible": true,
             "options": {
               "icon": "Warning",
-              "text": "Entra diagnostic settings are tenant-scoped and require appropriate tenant permissions. Untick these options if the deployment identity cannot create tenant diagnostic settings."
+              "text": "Sign-in and audit logs are a tenant-level diagnostic setting. The person deploying needs Global Administrator or Security Administrator, and sign-in logs need Entra ID P1 or P2. If you lack this, untick the log options and enable them later."
             }
+          },
+          {
+            "name": "enableEntraIdProtection",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Entra ID Protection alerts (connector)",
+            "defaultValue": false
           },
           {
             "name": "enableEntraSignInLogs",
@@ -164,28 +212,36 @@
           {
             "name": "enableEntraRiskLogs",
             "type": "Microsoft.Common.CheckBox",
-            "label": "Identity Protection risk logs",
-            "defaultValue": false
+            "label": "Identity Protection risk logs (risky users, risk events)",
+            "defaultValue": false,
+            "toolTip": "Needs Entra ID P2."
           },
           {
             "name": "enableEntraGraphLogs",
             "type": "Microsoft.Common.CheckBox",
             "label": "Microsoft Graph activity logs",
-            "defaultValue": false
+            "defaultValue": false,
+            "toolTip": "High volume. Enable deliberately."
           }
         ]
       },
       {
-        "name": "resources",
-        "label": "Azure resource logs",
+        "name": "azure",
+        "label": "Azure",
         "elements": [
           {
-            "name": "resNote",
+            "name": "enableAzureActivity",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Azure Activity (subscription activity log)",
+            "defaultValue": true
+          },
+          {
+            "name": "aNote",
             "type": "Microsoft.Common.InfoBox",
             "visible": true,
             "options": {
               "icon": "Info",
-              "text": "Selected Azure resource types are targeted by DeployIfNotExists policy definitions that configure diagnostic settings to this workspace. Existing resources require policy remediation."
+              "text": "The options below deploy an Azure Policy (DeployIfNotExists) at subscription scope that adds a diagnostic setting to every matching resource, now and in future. Existing resources are only fixed after a policy remediation task is run. All log categories are sent, which can be costly for NSGs and Firewalls. Needs Owner on the subscription."
             }
           },
           {
@@ -227,35 +283,175 @@
         ]
       },
       {
-        "name": "ama",
-        "label": "Servers and network devices",
+        "name": "m365",
+        "label": "Microsoft 365",
         "elements": [
           {
-            "name": "amaNote",
+            "name": "mNote",
             "type": "Microsoft.Common.InfoBox",
             "visible": true,
             "options": {
               "icon": "Info",
-              "text": "AMA-based collection requires Data Collection Rules plus Azure Monitor Agent association to target machines. These choices are captured for onboarding and are not auto-enabled by this template because target machines, Arc scope and facility/log selections are environment-specific."
+              "text": "Requires unified audit logging to be on in the tenant, and Global or Security Administrator to connect. Items marked preview use a preview Sentinel API version."
             }
           },
           {
-            "name": "enableWindowsSecurityEvents",
+            "name": "enableO365Exchange",
             "type": "Microsoft.Common.CheckBox",
-            "label": "Windows Security Events via AMA",
+            "label": "Exchange Online",
             "defaultValue": false
           },
           {
-            "name": "enableLinuxSyslog",
+            "name": "enableO365SharePoint",
             "type": "Microsoft.Common.CheckBox",
-            "label": "Linux Syslog via AMA",
+            "label": "SharePoint and OneDrive",
             "defaultValue": false
           },
           {
-            "name": "enableCefAma",
+            "name": "enableO365Teams",
             "type": "Microsoft.Common.CheckBox",
-            "label": "Common Event Format (CEF) via AMA",
+            "label": "Teams",
             "defaultValue": false
+          },
+          {
+            "name": "enableInsiderRisk",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Insider Risk Management (preview API)",
+            "defaultValue": false
+          },
+          {
+            "name": "enablePowerBI",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Power BI (preview API)",
+            "defaultValue": false
+          },
+          {
+            "name": "enableDynamics365",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Dynamics 365 (preview API)",
+            "defaultValue": false
+          },
+          {
+            "name": "enableProject",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Microsoft Project (preview API)",
+            "defaultValue": false
+          },
+          {
+            "name": "enablePurviewInfoProtection",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Purview Information Protection (preview API)",
+            "defaultValue": false
+          }
+        ]
+      },
+      {
+        "name": "ti",
+        "label": "Threat intelligence",
+        "elements": [
+          {
+            "name": "enableMdti",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Microsoft Defender Threat Intelligence (free emerging threat feed)",
+            "defaultValue": false,
+            "toolTip": "Ingests all available history on first sync."
+          },
+          {
+            "name": "enableTip",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Threat Intelligence Platforms (Graph tiIndicator, legacy)",
+            "defaultValue": false
+          }
+        ]
+      },
+      {
+        "name": "aws",
+        "label": "AWS",
+        "elements": [
+          {
+            "name": "awsNote",
+            "type": "Microsoft.Common.InfoBox",
+            "visible": true,
+            "options": {
+              "icon": "Warning",
+              "text": "The AWS side must already exist: an IAM role that trusts Sentinel (the trust policy values are shown on the connector page in Sentinel, and the workspace ID is exposed as a deployment output), plus CloudTrail and, for S3, the bucket and SQS queue. This wizard only creates the Sentinel connector."
+            }
+          },
+          {
+            "name": "enableAwsCloudTrail",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "AWS CloudTrail",
+            "defaultValue": false
+          },
+          {
+            "name": "awsCloudTrailRoleArn",
+            "type": "Microsoft.Common.TextBox",
+            "label": "CloudTrail IAM role ARN",
+            "defaultValue": "",
+            "visible": "[steps('aws').enableAwsCloudTrail]",
+            "constraints": {
+              "required": true,
+              "regex": "^arn:aws:iam::[0-9]{12}:role/.+$",
+              "validationMessage": "Enter a valid IAM role ARN"
+            }
+          },
+          {
+            "name": "enableAwsS3",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "AWS S3 (VPC Flow, GuardDuty, CloudTrail, S3 access logs; preview API)",
+            "defaultValue": false
+          },
+          {
+            "name": "awsS3RoleArn",
+            "type": "Microsoft.Common.TextBox",
+            "label": "S3 connector IAM role ARN",
+            "defaultValue": "",
+            "visible": "[steps('aws').enableAwsS3]",
+            "constraints": {
+              "required": true,
+              "regex": "^arn:aws:iam::[0-9]{12}:role/.+$",
+              "validationMessage": "Enter a valid IAM role ARN"
+            }
+          },
+          {
+            "name": "awsS3SqsUrl",
+            "type": "Microsoft.Common.TextBox",
+            "label": "SQS queue URL",
+            "defaultValue": "",
+            "visible": "[steps('aws').enableAwsS3]",
+            "constraints": {
+              "required": true,
+              "regex": "^https://sqs\\.[a-z0-9-]+\\.amazonaws\\.com/[0-9]{12}/.+$",
+              "validationMessage": "Enter a valid SQS queue URL"
+            }
+          },
+          {
+            "name": "awsS3Table",
+            "type": "Microsoft.Common.DropDown",
+            "label": "Destination table",
+            "defaultValue": "AWSCloudTrail",
+            "visible": "[steps('aws').enableAwsS3]",
+            "constraints": {
+              "required": true,
+              "allowedValues": [
+                {
+                  "label": "AWSCloudTrail",
+                  "value": "AWSCloudTrail"
+                },
+                {
+                  "label": "AWSVPCFlow",
+                  "value": "AWSVPCFlow"
+                },
+                {
+                  "label": "AWSGuardDuty",
+                  "value": "AWSGuardDuty"
+                },
+                {
+                  "label": "AWSS3ServerAccess",
+                  "value": "AWSS3ServerAccess"
+                }
+              ]
+            }
           }
         ]
       }
@@ -266,23 +462,41 @@
       "workspaceName": "[steps('workspace').workspaceName]",
       "retentionInDays": "[steps('workspace').retention]",
       "dailyQuotaGb": "[steps('workspace').dailyCap]",
-      "enableAzureActivity": "[steps('sources').enableAzureActivity]",
-      "enableDefenderForCloud": "[steps('sources').enableDefenderForCloud]",
-      "enableEntraIdProtection": "[steps('sources').enableEntraIdProtection]",
-      "enableDefenderXdr": "[steps('sources').enableDefenderXdr]",
+      "enableDefenderXdr": "[steps('defender').enableDefenderXdr]",
+      "enableDefenderForCloud": "[steps('defender').enableDefenderForCloud]",
+      "enableDefenderForIdentity": "[steps('defender').enableDefenderForIdentity]",
+      "enableDefenderForCloudApps": "[steps('defender').enableDefenderForCloudApps]",
+      "enableDefenderForCloudAppsDiscovery": "[and(steps('defender').enableDefenderForCloudApps, steps('defender').enableDefenderForCloudAppsDiscovery)]",
+      "enableDefenderForOffice365": "[steps('defender').enableDefenderForOffice365]",
+      "enableDefenderForEndpoint": "[steps('defender').enableDefenderForEndpoint]",
+      "enableEntraIdProtection": "[steps('entra').enableEntraIdProtection]",
       "enableEntraSignInLogs": "[steps('entra').enableEntraSignInLogs]",
       "enableEntraAuditLogs": "[steps('entra').enableEntraAuditLogs]",
       "enableEntraRiskLogs": "[steps('entra').enableEntraRiskLogs]",
       "enableEntraGraphLogs": "[steps('entra').enableEntraGraphLogs]",
-      "enableKeyVaultLogs": "[steps('resources').enableKeyVaultLogs]",
-      "enableNsgLogs": "[steps('resources').enableNsgLogs]",
-      "enableFirewallLogs": "[steps('resources').enableFirewallLogs]",
-      "enableAppGatewayLogs": "[steps('resources').enableAppGatewayLogs]",
-      "enableAksLogs": "[steps('resources').enableAksLogs]",
-      "enableAppServiceLogs": "[steps('resources').enableAppServiceLogs]",
-      "enableWindowsSecurityEvents": "[steps('ama').enableWindowsSecurityEvents]",
-      "enableLinuxSyslog": "[steps('ama').enableLinuxSyslog]",
-      "enableCefAma": "[steps('ama').enableCefAma]"
+      "enableAzureActivity": "[steps('azure').enableAzureActivity]",
+      "enableKeyVaultLogs": "[steps('azure').enableKeyVaultLogs]",
+      "enableNsgLogs": "[steps('azure').enableNsgLogs]",
+      "enableFirewallLogs": "[steps('azure').enableFirewallLogs]",
+      "enableAppGatewayLogs": "[steps('azure').enableAppGatewayLogs]",
+      "enableAksLogs": "[steps('azure').enableAksLogs]",
+      "enableAppServiceLogs": "[steps('azure').enableAppServiceLogs]",
+      "enableO365Exchange": "[steps('m365').enableO365Exchange]",
+      "enableO365SharePoint": "[steps('m365').enableO365SharePoint]",
+      "enableO365Teams": "[steps('m365').enableO365Teams]",
+      "enableInsiderRisk": "[steps('m365').enableInsiderRisk]",
+      "enablePowerBI": "[steps('m365').enablePowerBI]",
+      "enableDynamics365": "[steps('m365').enableDynamics365]",
+      "enableProject": "[steps('m365').enableProject]",
+      "enablePurviewInfoProtection": "[steps('m365').enablePurviewInfoProtection]",
+      "enableMdti": "[steps('ti').enableMdti]",
+      "enableTip": "[steps('ti').enableTip]",
+      "enableAwsCloudTrail": "[steps('aws').enableAwsCloudTrail]",
+      "awsCloudTrailRoleArn": "[if(steps('aws').enableAwsCloudTrail, steps('aws').awsCloudTrailRoleArn, '')]",
+      "enableAwsS3": "[steps('aws').enableAwsS3]",
+      "awsS3RoleArn": "[if(steps('aws').enableAwsS3, steps('aws').awsS3RoleArn, '')]",
+      "awsS3SqsUrl": "[if(steps('aws').enableAwsS3, steps('aws').awsS3SqsUrl, '')]",
+      "awsS3Table": "[if(steps('aws').enableAwsS3, steps('aws').awsS3Table, 'AWSCloudTrail')]"
     }
   }
 }

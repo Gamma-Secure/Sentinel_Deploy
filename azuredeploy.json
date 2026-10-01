@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.47.16.16243",
-      "templateHash": "18090301338456680091"
+      "templateHash": "14660145975812103933"
     }
   },
   "parameters": {
@@ -38,7 +38,31 @@
       "type": "bool",
       "defaultValue": true
     },
+    "enableDefenderXdr": {
+      "type": "bool",
+      "defaultValue": false
+    },
     "enableDefenderForCloud": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "enableDefenderForCloudApps": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "enableDefenderForCloudAppsDiscovery": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "enableDefenderForIdentity": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "enableDefenderForEndpoint": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "enableDefenderForOffice365": {
       "type": "bool",
       "defaultValue": false
     },
@@ -46,9 +70,69 @@
       "type": "bool",
       "defaultValue": false
     },
-    "enableDefenderXdr": {
+    "enableO365Exchange": {
       "type": "bool",
       "defaultValue": false
+    },
+    "enableO365SharePoint": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "enableO365Teams": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "enableInsiderRisk": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "enablePowerBI": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "enableDynamics365": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "enableProject": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "enablePurviewInfoProtection": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "enableMdti": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "enableTip": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "enableAwsCloudTrail": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "awsCloudTrailRoleArn": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "enableAwsS3": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "awsS3RoleArn": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "awsS3SqsUrl": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "awsS3Table": {
+      "type": "string",
+      "defaultValue": "AWSCloudTrail"
     },
     "enableEntraSignInLogs": {
       "type": "bool",
@@ -111,45 +195,7 @@
     "entraRisk": "[if(parameters('enableEntraRiskLogs'), createArray('RiskyUsers', 'UserRiskEvents', 'RiskyServicePrincipals', 'ServicePrincipalRiskEvents'), createArray())]",
     "entraGraph": "[if(parameters('enableEntraGraphLogs'), createArray('MicrosoftGraphActivityLogs'), createArray())]",
     "entraCategories": "[concat(variables('entraSignIn'), variables('entraAudit'), variables('entraRisk'), variables('entraGraph'))]",
-    "allResourceSources": [
-      {
-        "enabled": "[parameters('enableKeyVaultLogs')]",
-        "key": "keyvault",
-        "label": "Key Vault",
-        "resourceType": "Microsoft.KeyVault/vaults"
-      },
-      {
-        "enabled": "[parameters('enableNsgLogs')]",
-        "key": "nsg",
-        "label": "Network Security Group",
-        "resourceType": "Microsoft.Network/networkSecurityGroups"
-      },
-      {
-        "enabled": "[parameters('enableFirewallLogs')]",
-        "key": "firewall",
-        "label": "Azure Firewall",
-        "resourceType": "Microsoft.Network/azureFirewalls"
-      },
-      {
-        "enabled": "[parameters('enableAppGatewayLogs')]",
-        "key": "appgw",
-        "label": "Application Gateway / WAF",
-        "resourceType": "Microsoft.Network/applicationGateways"
-      },
-      {
-        "enabled": "[parameters('enableAksLogs')]",
-        "key": "aks",
-        "label": "AKS",
-        "resourceType": "Microsoft.ContainerService/managedClusters"
-      },
-      {
-        "enabled": "[parameters('enableAppServiceLogs')]",
-        "key": "appservice",
-        "label": "App Service",
-        "resourceType": "Microsoft.Web/sites"
-      }
-    ],
-    "selectedResourceSources": "[filter(variables('allResourceSources'), lambda('s', lambdaVariables('s').enabled))]"
+    "selectedResourceSources": "[concat(if(parameters('enableKeyVaultLogs'), createArray(createObject('key', 'keyvault', 'label', 'Key Vault', 'resourceType', 'Microsoft.KeyVault/vaults')), createArray()), if(parameters('enableNsgLogs'), createArray(createObject('key', 'nsg', 'label', 'Network Security Group', 'resourceType', 'Microsoft.Network/networkSecurityGroups')), createArray()), if(parameters('enableFirewallLogs'), createArray(createObject('key', 'firewall', 'label', 'Azure Firewall', 'resourceType', 'Microsoft.Network/azureFirewalls')), createArray()), if(parameters('enableAppGatewayLogs'), createArray(createObject('key', 'appgw', 'label', 'Application Gateway / WAF', 'resourceType', 'Microsoft.Network/applicationGateways')), createArray()), if(parameters('enableAksLogs'), createArray(createObject('key', 'aks', 'label', 'AKS', 'resourceType', 'Microsoft.ContainerService/managedClusters')), createArray()), if(parameters('enableAppServiceLogs'), createArray(createObject('key', 'appservice', 'label', 'App Service', 'resourceType', 'Microsoft.Web/sites')), createArray()))]"
   },
   "resources": [
     {
@@ -210,14 +256,77 @@
           "subscriptionId": {
             "value": "[subscription().subscriptionId]"
           },
+          "enableDefenderXdr": {
+            "value": "[parameters('enableDefenderXdr')]"
+          },
           "enableDefenderForCloud": {
             "value": "[parameters('enableDefenderForCloud')]"
+          },
+          "enableDefenderForCloudApps": {
+            "value": "[parameters('enableDefenderForCloudApps')]"
+          },
+          "enableDefenderForCloudAppsDiscovery": {
+            "value": "[parameters('enableDefenderForCloudAppsDiscovery')]"
+          },
+          "enableDefenderForIdentity": {
+            "value": "[parameters('enableDefenderForIdentity')]"
+          },
+          "enableDefenderForEndpoint": {
+            "value": "[parameters('enableDefenderForEndpoint')]"
+          },
+          "enableDefenderForOffice365": {
+            "value": "[parameters('enableDefenderForOffice365')]"
           },
           "enableEntraIdProtection": {
             "value": "[parameters('enableEntraIdProtection')]"
           },
-          "enableDefenderXdr": {
-            "value": "[parameters('enableDefenderXdr')]"
+          "enableO365Exchange": {
+            "value": "[parameters('enableO365Exchange')]"
+          },
+          "enableO365SharePoint": {
+            "value": "[parameters('enableO365SharePoint')]"
+          },
+          "enableO365Teams": {
+            "value": "[parameters('enableO365Teams')]"
+          },
+          "enableInsiderRisk": {
+            "value": "[parameters('enableInsiderRisk')]"
+          },
+          "enablePowerBI": {
+            "value": "[parameters('enablePowerBI')]"
+          },
+          "enableDynamics365": {
+            "value": "[parameters('enableDynamics365')]"
+          },
+          "enableProject": {
+            "value": "[parameters('enableProject')]"
+          },
+          "enablePurviewInfoProtection": {
+            "value": "[parameters('enablePurviewInfoProtection')]"
+          },
+          "enableMdti": {
+            "value": "[parameters('enableMdti')]"
+          },
+          "enableTip": {
+            "value": "[parameters('enableTip')]"
+          },
+          "enableAwsCloudTrail": {
+            "value": "[parameters('enableAwsCloudTrail')]"
+          },
+          "awsCloudTrailRoleArn": {
+            "value": "[parameters('awsCloudTrailRoleArn')]"
+          },
+          "enableAwsS3": {
+            "value": "[parameters('enableAwsS3')]"
+          },
+          "awsS3RoleArn": {
+            "value": "[parameters('awsS3RoleArn')]"
+          },
+          "awsS3SqsUrl": {
+            "value": "[parameters('awsS3SqsUrl')]"
+          },
+          "awsS3Table": {
+            "value": "[parameters('awsS3Table')]"
           },
           "tags": {
             "value": "[parameters('tags')]"
@@ -230,7 +339,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.47.16.16243",
-              "templateHash": "1851866975785575104"
+              "templateHash": "1585635217979527842"
             }
           },
           "parameters": {
@@ -252,18 +361,85 @@
             "subscriptionId": {
               "type": "string"
             },
+            "tags": {
+              "type": "object"
+            },
+            "enableDefenderXdr": {
+              "type": "bool"
+            },
             "enableDefenderForCloud": {
+              "type": "bool"
+            },
+            "enableDefenderForCloudApps": {
+              "type": "bool"
+            },
+            "enableDefenderForCloudAppsDiscovery": {
+              "type": "bool"
+            },
+            "enableDefenderForIdentity": {
+              "type": "bool"
+            },
+            "enableDefenderForEndpoint": {
+              "type": "bool"
+            },
+            "enableDefenderForOffice365": {
               "type": "bool"
             },
             "enableEntraIdProtection": {
               "type": "bool"
             },
-            "enableDefenderXdr": {
+            "enableO365Exchange": {
               "type": "bool"
             },
-            "tags": {
-              "type": "object"
+            "enableO365SharePoint": {
+              "type": "bool"
+            },
+            "enableO365Teams": {
+              "type": "bool"
+            },
+            "enableInsiderRisk": {
+              "type": "bool"
+            },
+            "enablePowerBI": {
+              "type": "bool"
+            },
+            "enableDynamics365": {
+              "type": "bool"
+            },
+            "enableProject": {
+              "type": "bool"
+            },
+            "enablePurviewInfoProtection": {
+              "type": "bool"
+            },
+            "enableMdti": {
+              "type": "bool"
+            },
+            "enableTip": {
+              "type": "bool"
+            },
+            "enableAwsCloudTrail": {
+              "type": "bool"
+            },
+            "awsCloudTrailRoleArn": {
+              "type": "string"
+            },
+            "enableAwsS3": {
+              "type": "bool"
+            },
+            "awsS3RoleArn": {
+              "type": "string"
+            },
+            "awsS3SqsUrl": {
+              "type": "string"
+            },
+            "awsS3Table": {
+              "type": "string"
             }
+          },
+          "variables": {
+            "allHistory": "1970-01-01T00:00:00.000Z",
+            "enableO365": "[or(or(parameters('enableO365Exchange'), parameters('enableO365SharePoint')), parameters('enableO365Teams'))]"
           },
           "resources": [
             {
@@ -293,7 +469,7 @@
             {
               "condition": "[parameters('enableDefenderForCloud')]",
               "type": "Microsoft.SecurityInsights/dataConnectors",
-              "apiVersion": "2024-03-01",
+              "apiVersion": "2025-09-01",
               "scope": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
               "name": "[guid(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'AzureSecurityCenter')]",
               "kind": "AzureSecurityCenter",
@@ -313,7 +489,7 @@
             {
               "condition": "[parameters('enableEntraIdProtection')]",
               "type": "Microsoft.SecurityInsights/dataConnectors",
-              "apiVersion": "2024-03-01",
+              "apiVersion": "2025-09-01",
               "scope": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
               "name": "[guid(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'AzureActiveDirectory')]",
               "kind": "AzureActiveDirectory",
@@ -331,9 +507,160 @@
               ]
             },
             {
+              "condition": "[parameters('enableDefenderForIdentity')]",
+              "type": "Microsoft.SecurityInsights/dataConnectors",
+              "apiVersion": "2025-09-01",
+              "scope": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+              "name": "[guid(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'AzureAdvancedThreatProtection')]",
+              "kind": "AzureAdvancedThreatProtection",
+              "properties": {
+                "tenantId": "[parameters('tenantId')]",
+                "dataTypes": {
+                  "alerts": {
+                    "state": "Enabled"
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+                "[extensionResourceId(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'Microsoft.SecurityInsights/onboardingStates', 'default')]"
+              ]
+            },
+            {
+              "condition": "[parameters('enableDefenderForCloudApps')]",
+              "type": "Microsoft.SecurityInsights/dataConnectors",
+              "apiVersion": "2025-09-01",
+              "scope": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+              "name": "[guid(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'MicrosoftCloudAppSecurity')]",
+              "kind": "MicrosoftCloudAppSecurity",
+              "properties": {
+                "tenantId": "[parameters('tenantId')]",
+                "dataTypes": {
+                  "alerts": {
+                    "state": "Enabled"
+                  },
+                  "discoveryLogs": {
+                    "state": "[if(parameters('enableDefenderForCloudAppsDiscovery'), 'Enabled', 'Disabled')]"
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+                "[extensionResourceId(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'Microsoft.SecurityInsights/onboardingStates', 'default')]"
+              ]
+            },
+            {
+              "condition": "[parameters('enableDefenderForEndpoint')]",
+              "type": "Microsoft.SecurityInsights/dataConnectors",
+              "apiVersion": "2025-09-01",
+              "scope": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+              "name": "[guid(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'MicrosoftDefenderAdvancedThreatProtection')]",
+              "kind": "MicrosoftDefenderAdvancedThreatProtection",
+              "properties": {
+                "tenantId": "[parameters('tenantId')]",
+                "dataTypes": {
+                  "alerts": {
+                    "state": "Enabled"
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+                "[extensionResourceId(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'Microsoft.SecurityInsights/onboardingStates', 'default')]"
+              ]
+            },
+            {
+              "condition": "[variables('enableO365')]",
+              "type": "Microsoft.SecurityInsights/dataConnectors",
+              "apiVersion": "2025-09-01",
+              "scope": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+              "name": "[guid(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'Office365')]",
+              "kind": "Office365",
+              "properties": {
+                "tenantId": "[parameters('tenantId')]",
+                "dataTypes": {
+                  "exchange": {
+                    "state": "[if(parameters('enableO365Exchange'), 'Enabled', 'Disabled')]"
+                  },
+                  "sharePoint": {
+                    "state": "[if(parameters('enableO365SharePoint'), 'Enabled', 'Disabled')]"
+                  },
+                  "teams": {
+                    "state": "[if(parameters('enableO365Teams'), 'Enabled', 'Disabled')]"
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+                "[extensionResourceId(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'Microsoft.SecurityInsights/onboardingStates', 'default')]"
+              ]
+            },
+            {
+              "condition": "[parameters('enableMdti')]",
+              "type": "Microsoft.SecurityInsights/dataConnectors",
+              "apiVersion": "2025-09-01",
+              "scope": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+              "name": "[guid(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'MicrosoftThreatIntelligence')]",
+              "kind": "MicrosoftThreatIntelligence",
+              "properties": {
+                "tenantId": "[parameters('tenantId')]",
+                "dataTypes": {
+                  "microsoftEmergingThreatFeed": {
+                    "lookbackPeriod": "[variables('allHistory')]",
+                    "state": "Enabled"
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+                "[extensionResourceId(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'Microsoft.SecurityInsights/onboardingStates', 'default')]"
+              ]
+            },
+            {
+              "condition": "[parameters('enableTip')]",
+              "type": "Microsoft.SecurityInsights/dataConnectors",
+              "apiVersion": "2025-09-01",
+              "scope": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+              "name": "[guid(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'ThreatIntelligence')]",
+              "kind": "ThreatIntelligence",
+              "properties": {
+                "tenantId": "[parameters('tenantId')]",
+                "tipLookbackPeriod": "[variables('allHistory')]",
+                "dataTypes": {
+                  "indicators": {
+                    "state": "Enabled"
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+                "[extensionResourceId(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'Microsoft.SecurityInsights/onboardingStates', 'default')]"
+              ]
+            },
+            {
+              "condition": "[parameters('enableAwsCloudTrail')]",
+              "type": "Microsoft.SecurityInsights/dataConnectors",
+              "apiVersion": "2025-09-01",
+              "scope": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+              "name": "[guid(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'AmazonWebServicesCloudTrail')]",
+              "kind": "AmazonWebServicesCloudTrail",
+              "properties": {
+                "awsRoleArn": "[parameters('awsCloudTrailRoleArn')]",
+                "dataTypes": {
+                  "logs": {
+                    "state": "Enabled"
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+                "[extensionResourceId(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'Microsoft.SecurityInsights/onboardingStates', 'default')]"
+              ]
+            },
+            {
               "condition": "[parameters('enableDefenderXdr')]",
               "type": "Microsoft.SecurityInsights/dataConnectors",
-              "apiVersion": "2024-03-01",
+              "apiVersion": "2025-07-01-preview",
               "scope": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
               "name": "[guid(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'MicrosoftThreatProtection')]",
               "kind": "MicrosoftThreatProtection",
@@ -349,12 +676,160 @@
                 "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
                 "[extensionResourceId(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'Microsoft.SecurityInsights/onboardingStates', 'default')]"
               ]
+            },
+            {
+              "condition": "[parameters('enableDefenderForOffice365')]",
+              "type": "Microsoft.SecurityInsights/dataConnectors",
+              "apiVersion": "2025-07-01-preview",
+              "scope": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+              "name": "[guid(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'OfficeATP')]",
+              "kind": "OfficeATP",
+              "properties": {
+                "tenantId": "[parameters('tenantId')]",
+                "dataTypes": {
+                  "alerts": {
+                    "state": "Enabled"
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+                "[extensionResourceId(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'Microsoft.SecurityInsights/onboardingStates', 'default')]"
+              ]
+            },
+            {
+              "condition": "[parameters('enableInsiderRisk')]",
+              "type": "Microsoft.SecurityInsights/dataConnectors",
+              "apiVersion": "2025-07-01-preview",
+              "scope": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+              "name": "[guid(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'OfficeIRM')]",
+              "kind": "OfficeIRM",
+              "properties": {
+                "tenantId": "[parameters('tenantId')]",
+                "dataTypes": {
+                  "alerts": {
+                    "state": "Enabled"
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+                "[extensionResourceId(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'Microsoft.SecurityInsights/onboardingStates', 'default')]"
+              ]
+            },
+            {
+              "condition": "[parameters('enablePowerBI')]",
+              "type": "Microsoft.SecurityInsights/dataConnectors",
+              "apiVersion": "2025-07-01-preview",
+              "scope": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+              "name": "[guid(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'OfficePowerBI')]",
+              "kind": "OfficePowerBI",
+              "properties": {
+                "tenantId": "[parameters('tenantId')]",
+                "dataTypes": {
+                  "logs": {
+                    "state": "Enabled"
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+                "[extensionResourceId(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'Microsoft.SecurityInsights/onboardingStates', 'default')]"
+              ]
+            },
+            {
+              "condition": "[parameters('enableDynamics365')]",
+              "type": "Microsoft.SecurityInsights/dataConnectors",
+              "apiVersion": "2025-07-01-preview",
+              "scope": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+              "name": "[guid(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'Dynamics365')]",
+              "kind": "Dynamics365",
+              "properties": {
+                "tenantId": "[parameters('tenantId')]",
+                "dataTypes": {
+                  "dynamics365CdsActivities": {
+                    "state": "Enabled"
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+                "[extensionResourceId(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'Microsoft.SecurityInsights/onboardingStates', 'default')]"
+              ]
+            },
+            {
+              "condition": "[parameters('enableProject')]",
+              "type": "Microsoft.SecurityInsights/dataConnectors",
+              "apiVersion": "2025-07-01-preview",
+              "scope": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+              "name": "[guid(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'Office365Project')]",
+              "kind": "Office365Project",
+              "properties": {
+                "tenantId": "[parameters('tenantId')]",
+                "dataTypes": {
+                  "logs": {
+                    "state": "Enabled"
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+                "[extensionResourceId(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'Microsoft.SecurityInsights/onboardingStates', 'default')]"
+              ]
+            },
+            {
+              "condition": "[parameters('enablePurviewInfoProtection')]",
+              "type": "Microsoft.SecurityInsights/dataConnectors",
+              "apiVersion": "2025-07-01-preview",
+              "scope": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+              "name": "[guid(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'MicrosoftPurviewInformationProtection')]",
+              "kind": "MicrosoftPurviewInformationProtection",
+              "properties": {
+                "tenantId": "[parameters('tenantId')]",
+                "dataTypes": {
+                  "logs": {
+                    "state": "Enabled"
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+                "[extensionResourceId(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'Microsoft.SecurityInsights/onboardingStates', 'default')]"
+              ]
+            },
+            {
+              "condition": "[parameters('enableAwsS3')]",
+              "type": "Microsoft.SecurityInsights/dataConnectors",
+              "apiVersion": "2025-07-01-preview",
+              "scope": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+              "name": "[guid(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'AmazonWebServicesS3', parameters('awsS3Table'))]",
+              "kind": "AmazonWebServicesS3",
+              "properties": {
+                "destinationTable": "[parameters('awsS3Table')]",
+                "roleArn": "[parameters('awsS3RoleArn')]",
+                "sqsUrls": [
+                  "[parameters('awsS3SqsUrl')]"
+                ],
+                "dataTypes": {
+                  "logs": {
+                    "state": "Enabled"
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+                "[extensionResourceId(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'Microsoft.SecurityInsights/onboardingStates', 'default')]"
+              ]
             }
           ],
           "outputs": {
             "workspaceId": {
               "type": "string",
               "value": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]"
+            },
+            "workspaceCustomerId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), '2023-09-01').customerId]"
             }
           }
         }
@@ -655,9 +1130,9 @@
       "type": "string",
       "value": "[parameters('workspaceName')]"
     },
-    "policyAssignmentNames": {
-      "type": "array",
-      "value": "[coalesce(tryGet(if(not(empty(variables('selectedResourceSources'))), reference(subscriptionResourceId('Microsoft.Resources/deployments', 'sentinel-resource-diagnostics'), '2025-04-01'), null()), 'outputs', 'assignmentNames', 'value'), createArray())]"
+    "workspaceCustomerId": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'sentinel-core'), '2025-04-01').outputs.workspaceCustomerId.value]"
     }
   }
 }
