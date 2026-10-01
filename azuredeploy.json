@@ -295,7 +295,7 @@
             {
               "condition": "[parameters('enableDefenderXdr')]",
               "type": "Microsoft.SecurityInsights/dataConnectors",
-              "apiVersion": "2024-03-01",
+              "apiVersion": "2023-02-01-preview",
               "scope": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
               "name": "[guid(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'MicrosoftThreatProtection')]",
               "kind": "MicrosoftThreatProtection",
