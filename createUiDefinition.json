@@ -205,15 +205,40 @@
             "visible": true,
             "options": {
               "icon": "Info",
-              "text": "This enables the Entra ID Protection alerts connector. Entra sign-in and audit logs can't be created by a subscription-level deployment (they need tenant-root permissions), so enable them after deployment using the README steps or enable-entra-logs.sh."
+              "text": "The Identity Protection option below is a normal connector. The log options create a tenant-level diagnostic setting, which needs Owner at the tenant root (\"/\"), not just on a subscription or management group, plus Global or Security Administrator in Entra. A Global Administrator can enable 'Access management for Azure resources' in Entra properties and grant themselves Owner at \"/\" for the deployment. Sign-in logs need Entra ID P1 or P2. If you can't do this, leave them unticked and run enable-entra-logs.sh instead."
             }
           },
           {
             "name": "enableEntraIdProtection",
             "type": "Microsoft.Common.CheckBox",
             "label": "Entra ID Protection alerts (connector)",
+            "defaultValue": false
+          },
+          {
+            "name": "enableEntraSignInLogs",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Sign-in logs (interactive, non-interactive, service principal, managed identity)",
+            "defaultValue": false
+          },
+          {
+            "name": "enableEntraAuditLogs",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Audit and provisioning logs",
+            "defaultValue": false
+          },
+          {
+            "name": "enableEntraRiskLogs",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Identity Protection risk logs (risky users, risk events)",
             "defaultValue": false,
-            "toolTip": "Needs Entra ID P2 and Global or Security Administrator."
+            "toolTip": "Needs Entra ID P2."
+          },
+          {
+            "name": "enableEntraGraphLogs",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Microsoft Graph activity logs",
+            "defaultValue": false,
+            "toolTip": "High volume. Enable deliberately."
           }
         ]
       },
@@ -222,18 +247,49 @@
         "label": "Azure",
         "elements": [
           {
-            "name": "enableAzureActivity",
-            "type": "Microsoft.Common.CheckBox",
-            "label": "Azure Activity (this subscription's activity log)",
-            "defaultValue": true
+            "name": "activityMode",
+            "type": "Microsoft.Common.DropDown",
+            "label": "Azure Activity collection",
+            "defaultValue": "This subscription only",
+            "toolTip": "Pick one. Using both would ingest the same logs twice.",
+            "constraints": {
+              "required": true,
+              "allowedValues": [
+                {
+                  "label": "None",
+                  "value": "none"
+                },
+                {
+                  "label": "This subscription only",
+                  "value": "subscription"
+                },
+                {
+                  "label": "All subscriptions under a management group (policy)",
+                  "value": "managementGroup"
+                }
+              ]
+            }
           },
           {
-            "name": "activityMgNote",
+            "name": "managementGroupId",
+            "type": "Microsoft.Common.TextBox",
+            "label": "Management group ID",
+            "defaultValue": "",
+            "visible": "[equals(steps('azure').activityMode,'managementGroup')]",
+            "toolTip": "The ID (not display name) of the management group.",
+            "constraints": {
+              "required": true,
+              "regex": "^[a-zA-Z0-9._()-]{1,90}$",
+              "validationMessage": "1-90 chars: letters, numbers, . _ ( ) -"
+            }
+          },
+          {
+            "name": "mgNote",
             "type": "Microsoft.Common.InfoBox",
-            "visible": true,
+            "visible": "[equals(steps('azure').activityMode,'managementGroup')]",
             "options": {
-              "icon": "Info",
-              "text": "To collect Azure Activity from every subscription under a management group, leave this ticked only if this is your single subscription, and run enable-activity-policy.sh after deployment (needs Owner at the management group). Don't use both for the same subscription, or the logs are ingested twice."
+              "icon": "Warning",
+              "text": "Deploys a DeployIfNotExists policy at the management group through a tenant-scope deployment, so it needs Owner at the tenant root (\"/\"). New subscriptions are covered automatically; existing ones need a remediation task: az policy remediation create -n activity-fix --management-group <id> --policy-assignment sentinel-activity-logs. If this subscription already has a sentinel-activity-logs diagnostic setting from an earlier run, delete it to avoid duplicate ingestion."
             }
           },
           {
@@ -471,7 +527,7 @@
       "enableDefenderForOffice365": "[steps('defender').enableDefenderForOffice365]",
       "enableDefenderForEndpoint": "[steps('defender').enableDefenderForEndpoint]",
       "enableEntraIdProtection": "[steps('entra').enableEntraIdProtection]",
-      "enableAzureActivity": "[steps('azure').enableAzureActivity]",
+      "enableAzureActivity": "[equals(steps('azure').activityMode,'subscription')]",
       "enableKeyVaultLogs": "[steps('azure').enableKeyVaultLogs]",
       "enableNsgLogs": "[steps('azure').enableNsgLogs]",
       "enableFirewallLogs": "[steps('azure').enableFirewallLogs]",
@@ -494,7 +550,13 @@
       "awsS3RoleArn": "[if(steps('aws').enableAwsS3, steps('aws').awsS3RoleArn, '')]",
       "awsS3SqsUrl": "[if(steps('aws').enableAwsS3, steps('aws').awsS3SqsUrl, '')]",
       "awsS3Table": "[if(steps('aws').enableAwsS3, steps('aws').awsS3Table, 'AWSCloudTrail')]",
-      "enableDefenderXdrAlerts": "[and(steps('defender').enableDefenderXdr, steps('defender').enableDefenderXdrAlerts)]"
+      "enableDefenderXdrAlerts": "[and(steps('defender').enableDefenderXdr, steps('defender').enableDefenderXdrAlerts)]",
+      "enableActivityPolicy": "[equals(steps('azure').activityMode,'managementGroup')]",
+      "managementGroupId": "[if(equals(steps('azure').activityMode,'managementGroup'), steps('azure').managementGroupId, '')]",
+      "enableEntraSignInLogs": "[steps('entra').enableEntraSignInLogs]",
+      "enableEntraAuditLogs": "[steps('entra').enableEntraAuditLogs]",
+      "enableEntraRiskLogs": "[steps('entra').enableEntraRiskLogs]",
+      "enableEntraGraphLogs": "[steps('entra').enableEntraGraphLogs]"
     }
   }
 }
