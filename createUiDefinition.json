@@ -128,6 +128,23 @@
             "toolTip": "Uses a preview Sentinel API version. Needs Global or Security Administrator."
           },
           {
+            "name": "enableDefenderXdrAlerts",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Also sync XDR alerts (SecurityAlert table)",
+            "defaultValue": false,
+            "visible": "[steps('defender').enableDefenderXdr]",
+            "toolTip": "Incidents are always synced when XDR is enabled. Tick to also sync the underlying alerts."
+          },
+          {
+            "name": "xdrEventsNote",
+            "type": "Microsoft.Common.InfoBox",
+            "visible": "[steps('defender').enableDefenderXdr]",
+            "options": {
+              "icon": "Info",
+              "text": "Raw event tables (DeviceFileEvents, DeviceProcessEvents, DeviceNetworkEvents, Email*, Identity*, CloudAppEvents and others) can't be enabled by a template. After deployment: Sentinel > Data connectors > Microsoft Defender XDR > Open connector page > Connect events > tick the tables > Apply Changes. Device tables are high volume, so start with the ones your detections need."
+            }
+          },
+          {
             "name": "dWarn",
             "type": "Microsoft.Common.InfoBox",
             "visible": "[and(steps('defender').enableDefenderXdr, or(steps('defender').enableDefenderForCloudApps, steps('defender').enableDefenderForIdentity, steps('defender').enableDefenderForOffice365, steps('defender').enableDefenderForEndpoint))]",
@@ -187,41 +204,16 @@
             "type": "Microsoft.Common.InfoBox",
             "visible": true,
             "options": {
-              "icon": "Warning",
-              "text": "Sign-in and audit logs are a tenant-level diagnostic setting. The person deploying needs Global Administrator or Security Administrator, and sign-in logs need Entra ID P1 or P2. If you lack this, untick the log options and enable them later."
+              "icon": "Info",
+              "text": "This enables the Entra ID Protection alerts connector. Entra sign-in and audit logs can't be created by a subscription-level deployment (they need tenant-root permissions), so enable them after deployment using the README steps or enable-entra-logs.sh."
             }
           },
           {
             "name": "enableEntraIdProtection",
             "type": "Microsoft.Common.CheckBox",
             "label": "Entra ID Protection alerts (connector)",
-            "defaultValue": false
-          },
-          {
-            "name": "enableEntraSignInLogs",
-            "type": "Microsoft.Common.CheckBox",
-            "label": "Sign-in logs (interactive, non-interactive, service principal, managed identity)",
-            "defaultValue": true
-          },
-          {
-            "name": "enableEntraAuditLogs",
-            "type": "Microsoft.Common.CheckBox",
-            "label": "Audit and provisioning logs",
-            "defaultValue": true
-          },
-          {
-            "name": "enableEntraRiskLogs",
-            "type": "Microsoft.Common.CheckBox",
-            "label": "Identity Protection risk logs (risky users, risk events)",
             "defaultValue": false,
-            "toolTip": "Needs Entra ID P2."
-          },
-          {
-            "name": "enableEntraGraphLogs",
-            "type": "Microsoft.Common.CheckBox",
-            "label": "Microsoft Graph activity logs",
-            "defaultValue": false,
-            "toolTip": "High volume. Enable deliberately."
+            "toolTip": "Needs Entra ID P2 and Global or Security Administrator."
           }
         ]
       },
@@ -470,10 +462,6 @@
       "enableDefenderForOffice365": "[steps('defender').enableDefenderForOffice365]",
       "enableDefenderForEndpoint": "[steps('defender').enableDefenderForEndpoint]",
       "enableEntraIdProtection": "[steps('entra').enableEntraIdProtection]",
-      "enableEntraSignInLogs": "[steps('entra').enableEntraSignInLogs]",
-      "enableEntraAuditLogs": "[steps('entra').enableEntraAuditLogs]",
-      "enableEntraRiskLogs": "[steps('entra').enableEntraRiskLogs]",
-      "enableEntraGraphLogs": "[steps('entra').enableEntraGraphLogs]",
       "enableAzureActivity": "[steps('azure').enableAzureActivity]",
       "enableKeyVaultLogs": "[steps('azure').enableKeyVaultLogs]",
       "enableNsgLogs": "[steps('azure').enableNsgLogs]",
@@ -496,7 +484,8 @@
       "enableAwsS3": "[steps('aws').enableAwsS3]",
       "awsS3RoleArn": "[if(steps('aws').enableAwsS3, steps('aws').awsS3RoleArn, '')]",
       "awsS3SqsUrl": "[if(steps('aws').enableAwsS3, steps('aws').awsS3SqsUrl, '')]",
-      "awsS3Table": "[if(steps('aws').enableAwsS3, steps('aws').awsS3Table, 'AWSCloudTrail')]"
+      "awsS3Table": "[if(steps('aws').enableAwsS3, steps('aws').awsS3Table, 'AWSCloudTrail')]",
+      "enableDefenderXdrAlerts": "[and(steps('defender').enableDefenderXdr, steps('defender').enableDefenderXdrAlerts)]"
     }
   }
 }

@@ -13,6 +13,7 @@ param dailyQuotaGb int = -1
 // Sentinel connectors / subscription-level sources
 param enableAzureActivity bool = true
 param enableDefenderXdr bool = false
+param enableDefenderXdrAlerts bool = false
 param enableDefenderForCloud bool = false
 param enableDefenderForCloudApps bool = false
 param enableDefenderForCloudAppsDiscovery bool = false
@@ -43,12 +44,6 @@ param awsS3RoleArn string = ''
 param awsS3SqsUrl string = ''
 param awsS3Table string = 'AWSCloudTrail'
 
-// Entra ID logs (tenant-level diagnostic setting)
-param enableEntraSignInLogs bool = false
-param enableEntraAuditLogs bool = false
-param enableEntraRiskLogs bool = false
-param enableEntraGraphLogs bool = false
-
 // Azure resource logs (deployed as Azure Policy, covers existing + new resources)
 param enableKeyVaultLogs bool = false
 param enableNsgLogs bool = false
@@ -69,12 +64,6 @@ var activityCategories = [
   'Autoscale'
   'ResourceHealth'
 ]
-
-var entraSignIn = enableEntraSignInLogs ? [ 'SignInLogs', 'NonInteractiveUserSignInLogs', 'ServicePrincipalSignInLogs', 'ManagedIdentitySignInLogs' ] : []
-var entraAudit = enableEntraAuditLogs ? [ 'AuditLogs', 'ProvisioningLogs' ] : []
-var entraRisk = enableEntraRiskLogs ? [ 'RiskyUsers', 'UserRiskEvents', 'RiskyServicePrincipals', 'ServicePrincipalRiskEvents' ] : []
-var entraGraph = enableEntraGraphLogs ? [ 'MicrosoftGraphActivityLogs' ] : []
-var entraCategories = concat(entraSignIn, entraAudit, entraRisk, entraGraph)
 
 var selectedResourceSources = concat(
   enableKeyVaultLogs ? [ { key: 'keyvault', label: 'Key Vault', resourceType: 'Microsoft.KeyVault/vaults' } ] : [],
@@ -102,6 +91,7 @@ module sentinel 'sentinel.bicep' = {
     tenantId: tenant().tenantId
     subscriptionId: subscription().subscriptionId
     enableDefenderXdr: enableDefenderXdr
+    enableDefenderXdrAlerts: enableDefenderXdrAlerts
     enableDefenderForCloud: enableDefenderForCloud
     enableDefenderForCloudApps: enableDefenderForCloudApps
     enableDefenderForCloudAppsDiscovery: enableDefenderForCloudAppsDiscovery
@@ -138,16 +128,6 @@ resource activityDiag 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview'
       category: c
       enabled: true
     }]
-  }
-}
-
-// Entra ID logs: tenant-scope diagnostic setting (needs Global/Security Administrator)
-module entraLogs 'entra-diagnostics.bicep' = if (!empty(entraCategories)) {
-  name: 'sentinel-entra-diagnostics'
-  scope: tenant()
-  params: {
-    workspaceId: sentinel.outputs.workspaceId
-    categories: entraCategories
   }
 }
 

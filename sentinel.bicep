@@ -8,6 +8,7 @@ param tags object
 
 // Microsoft Defender
 param enableDefenderXdr bool
+param enableDefenderXdrAlerts bool
 param enableDefenderForCloud bool
 param enableDefenderForCloudApps bool
 param enableDefenderForCloudAppsDiscovery bool
@@ -181,6 +182,7 @@ resource defenderXdr 'Microsoft.SecurityInsights/dataConnectors@2025-07-01-previ
     tenantId: tenantId
     dataTypes: {
       incidents: { state: 'Enabled' }
+      alerts: { state: enableDefenderXdrAlerts ? 'Enabled' : 'Disabled' }
     }
   }
 }

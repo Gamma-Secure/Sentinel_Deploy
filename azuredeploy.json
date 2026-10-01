@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.47.16.16243",
-      "templateHash": "14660145975812103933"
+      "templateHash": "8530537054278698947"
     }
   },
   "parameters": {
@@ -39,6 +39,10 @@
       "defaultValue": true
     },
     "enableDefenderXdr": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "enableDefenderXdrAlerts": {
       "type": "bool",
       "defaultValue": false
     },
@@ -134,22 +138,6 @@
       "type": "string",
       "defaultValue": "AWSCloudTrail"
     },
-    "enableEntraSignInLogs": {
-      "type": "bool",
-      "defaultValue": false
-    },
-    "enableEntraAuditLogs": {
-      "type": "bool",
-      "defaultValue": false
-    },
-    "enableEntraRiskLogs": {
-      "type": "bool",
-      "defaultValue": false
-    },
-    "enableEntraGraphLogs": {
-      "type": "bool",
-      "defaultValue": false
-    },
     "enableKeyVaultLogs": {
       "type": "bool",
       "defaultValue": false
@@ -190,11 +178,6 @@
       "Autoscale",
       "ResourceHealth"
     ],
-    "entraSignIn": "[if(parameters('enableEntraSignInLogs'), createArray('SignInLogs', 'NonInteractiveUserSignInLogs', 'ServicePrincipalSignInLogs', 'ManagedIdentitySignInLogs'), createArray())]",
-    "entraAudit": "[if(parameters('enableEntraAuditLogs'), createArray('AuditLogs', 'ProvisioningLogs'), createArray())]",
-    "entraRisk": "[if(parameters('enableEntraRiskLogs'), createArray('RiskyUsers', 'UserRiskEvents', 'RiskyServicePrincipals', 'ServicePrincipalRiskEvents'), createArray())]",
-    "entraGraph": "[if(parameters('enableEntraGraphLogs'), createArray('MicrosoftGraphActivityLogs'), createArray())]",
-    "entraCategories": "[concat(variables('entraSignIn'), variables('entraAudit'), variables('entraRisk'), variables('entraGraph'))]",
     "selectedResourceSources": "[concat(if(parameters('enableKeyVaultLogs'), createArray(createObject('key', 'keyvault', 'label', 'Key Vault', 'resourceType', 'Microsoft.KeyVault/vaults')), createArray()), if(parameters('enableNsgLogs'), createArray(createObject('key', 'nsg', 'label', 'Network Security Group', 'resourceType', 'Microsoft.Network/networkSecurityGroups')), createArray()), if(parameters('enableFirewallLogs'), createArray(createObject('key', 'firewall', 'label', 'Azure Firewall', 'resourceType', 'Microsoft.Network/azureFirewalls')), createArray()), if(parameters('enableAppGatewayLogs'), createArray(createObject('key', 'appgw', 'label', 'Application Gateway / WAF', 'resourceType', 'Microsoft.Network/applicationGateways')), createArray()), if(parameters('enableAksLogs'), createArray(createObject('key', 'aks', 'label', 'AKS', 'resourceType', 'Microsoft.ContainerService/managedClusters')), createArray()), if(parameters('enableAppServiceLogs'), createArray(createObject('key', 'appservice', 'label', 'App Service', 'resourceType', 'Microsoft.Web/sites')), createArray()))]"
   },
   "resources": [
@@ -258,6 +241,9 @@
           },
           "enableDefenderXdr": {
             "value": "[parameters('enableDefenderXdr')]"
+          },
+          "enableDefenderXdrAlerts": {
+            "value": "[parameters('enableDefenderXdrAlerts')]"
           },
           "enableDefenderForCloud": {
             "value": "[parameters('enableDefenderForCloud')]"
@@ -339,7 +325,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.47.16.16243",
-              "templateHash": "1585635217979527842"
+              "templateHash": "8211245597952258588"
             }
           },
           "parameters": {
@@ -365,6 +351,9 @@
               "type": "object"
             },
             "enableDefenderXdr": {
+              "type": "bool"
+            },
+            "enableDefenderXdrAlerts": {
               "type": "bool"
             },
             "enableDefenderForCloud": {
@@ -669,6 +658,9 @@
                 "dataTypes": {
                   "incidents": {
                     "state": "Enabled"
+                  },
+                  "alerts": {
+                    "state": "[if(parameters('enableDefenderXdrAlerts'), 'Enabled', 'Disabled')]"
                   }
                 }
               },
@@ -836,78 +828,6 @@
       },
       "dependsOn": [
         "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('resourceGroupName'))]"
-      ]
-    },
-    {
-      "condition": "[not(empty(variables('entraCategories')))]",
-      "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2025-04-01",
-      "name": "sentinel-entra-diagnostics",
-      "scope": "/",
-      "location": "[deployment().location]",
-      "properties": {
-        "expressionEvaluationOptions": {
-          "scope": "inner"
-        },
-        "mode": "Incremental",
-        "parameters": {
-          "workspaceId": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'sentinel-core'), '2025-04-01').outputs.workspaceId.value]"
-          },
-          "categories": {
-            "value": "[variables('entraCategories')]"
-          }
-        },
-        "template": {
-          "$schema": "https://schema.management.azure.com/schemas/2019-08-01/tenantDeploymentTemplate.json#",
-          "contentVersion": "1.0.0.0",
-          "metadata": {
-            "_generator": {
-              "name": "bicep",
-              "version": "0.47.16.16243",
-              "templateHash": "2145477407892355751"
-            }
-          },
-          "parameters": {
-            "workspaceId": {
-              "type": "string"
-            },
-            "categories": {
-              "type": "array",
-              "defaultValue": [
-                "SignInLogs",
-                "AuditLogs",
-                "NonInteractiveUserSignInLogs",
-                "ServicePrincipalSignInLogs",
-                "ManagedIdentitySignInLogs",
-                "ProvisioningLogs"
-              ]
-            }
-          },
-          "resources": [
-            {
-              "type": "microsoft.aadiam/diagnosticSettings",
-              "apiVersion": "2017-04-01",
-              "name": "sentinel-entra-logs",
-              "properties": {
-                "copy": [
-                  {
-                    "name": "logs",
-                    "count": "[length(parameters('categories'))]",
-                    "input": {
-                      "category": "[parameters('categories')[copyIndex('logs')]]",
-                      "enabled": true
-                    }
-                  }
-                ],
-                "workspaceId": "[parameters('workspaceId')]"
-              }
-            }
-          ]
-        }
-      },
-      "dependsOn": [
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'sentinel-core')]"
       ]
     },
     {
