@@ -243,13 +243,15 @@
               }
             },
             {
-              "type": "Microsoft.SecurityInsights/onboardingStates",
-              "apiVersion": "2024-03-01",
-              "scope": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
-              "name": "default",
-              "properties": {},
+            "type": "Microsoft.SecurityInsights/onboardingStates",
+            "apiVersion": "2022-11-01",
+            "scope": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]",
+            "name": "default",
+            "properties": {
+              "customerManagedKey": false
+                  },
               "dependsOn": [
-                "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]"
+        "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName'))]"
               ]
             },
             {
