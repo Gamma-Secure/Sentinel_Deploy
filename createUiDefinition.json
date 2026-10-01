@@ -24,14 +24,22 @@
             "type": "Microsoft.Common.TextBox",
             "label": "Resource group name",
             "defaultValue": "rg-sentinel-prod",
-            "constraints": { "required": true, "regex": "^[a-zA-Z0-9._()-]{1,90}$", "validationMessage": "1-90 chars: letters, numbers, . _ ( ) -" }
+            "constraints": {
+              "required": true,
+              "regex": "^[a-zA-Z0-9._()-]{1,90}$",
+              "validationMessage": "1-90 chars: letters, numbers, . _ ( ) -"
+            }
           },
           {
             "name": "workspaceName",
             "type": "Microsoft.Common.TextBox",
             "label": "Workspace name",
             "defaultValue": "law-sentinel-prod",
-            "constraints": { "required": true, "regex": "^[a-zA-Z0-9][a-zA-Z0-9-]{2,61}[a-zA-Z0-9]$", "validationMessage": "4-63 chars: letters, numbers, hyphens" }
+            "constraints": {
+              "required": true,
+              "regex": "^[a-zA-Z0-9][a-zA-Z0-9-]{2,61}[a-zA-Z0-9]$",
+              "validationMessage": "4-63 chars: letters, numbers, hyphens"
+            }
           },
           {
             "name": "retention",
@@ -42,11 +50,26 @@
             "constraints": {
               "required": true,
               "allowedValues": [
-                { "label": "30", "value": 30 },
-                { "label": "90", "value": 90 },
-                { "label": "180", "value": 180 },
-                { "label": "365", "value": 365 },
-                { "label": "730", "value": 730 }
+                {
+                  "label": "30",
+                  "value": 30
+                },
+                {
+                  "label": "90",
+                  "value": 90
+                },
+                {
+                  "label": "180",
+                  "value": 180
+                },
+                {
+                  "label": "365",
+                  "value": 365
+                },
+                {
+                  "label": "730",
+                  "value": 730
+                }
               ]
             }
           },
@@ -59,11 +82,26 @@
             "constraints": {
               "required": true,
               "allowedValues": [
-                { "label": "No cap", "value": -1 },
-                { "label": "1", "value": 1 },
-                { "label": "5", "value": 5 },
-                { "label": "10", "value": 10 },
-                { "label": "50", "value": 50 }
+                {
+                  "label": "No cap",
+                  "value": -1
+                },
+                {
+                  "label": "1",
+                  "value": 1
+                },
+                {
+                  "label": "5",
+                  "value": 5
+                },
+                {
+                  "label": "10",
+                  "value": 10
+                },
+                {
+                  "label": "50",
+                  "value": 50
+                }
               ]
             }
           }
@@ -96,15 +134,98 @@
             "type": "Microsoft.Common.CheckBox",
             "label": "Microsoft Defender XDR (incidents)",
             "defaultValue": false
-          },
+          }
+        ]
+      },
+      {
+        "name": "entra",
+        "label": "Entra ID logs",
+        "elements": [
           {
-            "name": "entraLogsNote",
+            "name": "entraNote",
             "type": "Microsoft.Common.InfoBox",
             "visible": true,
             "options": {
               "icon": "Warning",
-              "text": "Entra ID sign-in and audit logs are a tenant-level diagnostic setting and can't be created from this wizard. After deployment, run entra-diagnostics.bicep with the workspace ID output."
+              "text": "Creates a tenant-level diagnostic setting. The person deploying needs Global Administrator or Security Administrator in Entra, and sign-in logs need Entra ID P1 or P2. If you lack this, untick everything on this page and enable it later."
             }
+          },
+          {
+            "name": "enableEntraSignInLogs",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Sign-in logs (interactive, non-interactive, service principal, managed identity)",
+            "defaultValue": true
+          },
+          {
+            "name": "enableEntraAuditLogs",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Audit and provisioning logs",
+            "defaultValue": true
+          },
+          {
+            "name": "enableEntraRiskLogs",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Identity Protection risk logs (risky users, risk events)",
+            "defaultValue": false,
+            "toolTip": "Needs Entra ID P2."
+          },
+          {
+            "name": "enableEntraGraphLogs",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Microsoft Graph activity logs",
+            "defaultValue": false,
+            "toolTip": "High volume. Enable deliberately."
+          }
+        ]
+      },
+      {
+        "name": "resources",
+        "label": "Azure resource logs",
+        "elements": [
+          {
+            "name": "resNote",
+            "type": "Microsoft.Common.InfoBox",
+            "visible": true,
+            "options": {
+              "icon": "Info",
+              "text": "Each option deploys an Azure Policy (DeployIfNotExists) at subscription scope that adds a diagnostic setting to every matching resource, now and in future. Existing resources are only fixed after a policy remediation task is run. Logs land in AzureDiagnostics or resource-specific tables. All log categories are sent, which can be costly for NSGs and Firewalls."
+            }
+          },
+          {
+            "name": "enableKeyVaultLogs",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Key Vault",
+            "defaultValue": false
+          },
+          {
+            "name": "enableNsgLogs",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Network Security Groups",
+            "defaultValue": false
+          },
+          {
+            "name": "enableFirewallLogs",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Azure Firewall",
+            "defaultValue": false
+          },
+          {
+            "name": "enableAppGatewayLogs",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Application Gateway / WAF",
+            "defaultValue": false
+          },
+          {
+            "name": "enableAksLogs",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Azure Kubernetes Service (AKS)",
+            "defaultValue": false
+          },
+          {
+            "name": "enableAppServiceLogs",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "App Service",
+            "defaultValue": false
           }
         ]
       }
@@ -118,7 +239,17 @@
       "enableAzureActivity": "[steps('sources').enableAzureActivity]",
       "enableDefenderForCloud": "[steps('sources').enableDefenderForCloud]",
       "enableEntraIdProtection": "[steps('sources').enableEntraIdProtection]",
-      "enableDefenderXdr": "[steps('sources').enableDefenderXdr]"
+      "enableDefenderXdr": "[steps('sources').enableDefenderXdr]",
+      "enableEntraSignInLogs": "[steps('entra').enableEntraSignInLogs]",
+      "enableEntraAuditLogs": "[steps('entra').enableEntraAuditLogs]",
+      "enableEntraRiskLogs": "[steps('entra').enableEntraRiskLogs]",
+      "enableEntraGraphLogs": "[steps('entra').enableEntraGraphLogs]",
+      "enableKeyVaultLogs": "[steps('resources').enableKeyVaultLogs]",
+      "enableNsgLogs": "[steps('resources').enableNsgLogs]",
+      "enableFirewallLogs": "[steps('resources').enableFirewallLogs]",
+      "enableAppGatewayLogs": "[steps('resources').enableAppGatewayLogs]",
+      "enableAksLogs": "[steps('resources').enableAksLogs]",
+      "enableAppServiceLogs": "[steps('resources').enableAppServiceLogs]"
     }
   }
 }
