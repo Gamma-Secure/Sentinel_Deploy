@@ -6,3 +6,8 @@ Click below to deploy the Sentinel solution:
 
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FGamma-Secure%2FSentinel_Deploy%2Frefs%2Fheads%2Fmain%2Fazuredeploy-tenant.json/createUIDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2FGamma-Secure%2FSentinel_Deploy%2Frefs%2Fheads%2Fmain%2FcreateUiDefinition-tenant.json)
+
+
+## Deploy to Azure Tenant Specific Azure Policy
+
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/e/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FGamma-Secure%2FSentinel_Deploy%2Frefs%2Fheads%2Fmain%2Fazuredeploy-tenant.json/createUIDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2FGamma-Secure%2FSentinel_Deploy%2Frefs%2Fheads%2Fmain%2FcreateUiDefinition-tenant.json)
