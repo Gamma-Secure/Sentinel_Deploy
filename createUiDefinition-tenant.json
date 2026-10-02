@@ -88,7 +88,7 @@
       },
       {
         "name": "activity",
-        "label": "Azure Activity",
+        "label": "Azure",
         "elements": [
           {
             "name": "enableActivityPolicy",
@@ -101,7 +101,7 @@
             "type": "Microsoft.Common.TextBox",
             "label": "Management group ID",
             "defaultValue": "",
-            "visible": "[steps('activity').enableActivityPolicy]",
+            "visible": "[or(steps('activity').enableActivityPolicy, or(steps('activity').enableKeyVaultLogs, steps('activity').enableNsgLogs, steps('activity').enableFirewallLogs, steps('activity').enableAppGatewayLogs, steps('activity').enableAksLogs, steps('activity').enableAppServiceLogs))]",
             "constraints": {
               "required": true,
               "regex": "^[a-zA-Z0-9._()-]{1,90}$",
@@ -111,11 +111,63 @@
           {
             "name": "aNote",
             "type": "Microsoft.Common.InfoBox",
-            "visible": "[steps('activity').enableActivityPolicy]",
+            "visible": "[or(steps('activity').enableActivityPolicy, or(steps('activity').enableKeyVaultLogs, steps('activity').enableNsgLogs, steps('activity').enableFirewallLogs, steps('activity').enableAppGatewayLogs, steps('activity').enableAksLogs, steps('activity').enableAppServiceLogs))]",
             "options": {
               "icon": "Info",
-              "text": "Deploys a DeployIfNotExists policy at the management group. New subscriptions are covered automatically; for existing ones run a remediation task: az policy remediation create -n activity-fix --management-group <id> --policy-assignment sentinel-activity-logs. If the core template already enabled Azure Activity for a subscription in this group, delete its sentinel-activity-logs diagnostic setting to avoid duplicate ingestion."
+              "text": "Deploys DeployIfNotExists policies at the management group, so they cover every subscription under it, including new ones. Existing resources are fixed by remediation tasks (tick the box below for resource logs; for Azure Activity run: az policy remediation create -n activity-fix --management-group <id> --policy-assignment sentinel-activity-logs). If the core template already enabled Azure Activity for a subscription in this group, delete its sentinel-activity-logs diagnostic setting to avoid duplicate ingestion. For individual subscriptions, use the core template."
             }
+          },
+          {
+            "name": "rNote",
+            "type": "Microsoft.Common.InfoBox",
+            "visible": true,
+            "options": {
+              "icon": "Info",
+              "text": "Resource log policies for the whole management group (all log categories are sent, which can be costly for NSGs and Firewalls)."
+            }
+          },
+          {
+            "name": "enableKeyVaultLogs",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Key Vault",
+            "defaultValue": false
+          },
+          {
+            "name": "enableNsgLogs",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Network Security Groups",
+            "defaultValue": false
+          },
+          {
+            "name": "enableFirewallLogs",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Azure Firewall",
+            "defaultValue": false
+          },
+          {
+            "name": "enableAppGatewayLogs",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Application Gateway / WAF",
+            "defaultValue": false
+          },
+          {
+            "name": "enableAksLogs",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Azure Kubernetes Service (AKS)",
+            "defaultValue": false
+          },
+          {
+            "name": "enableAppServiceLogs",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "App Service",
+            "defaultValue": false
+          },
+          {
+            "name": "remediateExistingResources",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Fix existing resources now (creates remediation tasks)",
+            "defaultValue": true,
+            "visible": "[or(steps('activity').enableKeyVaultLogs, steps('activity').enableNsgLogs, steps('activity').enableFirewallLogs, steps('activity').enableAppGatewayLogs, steps('activity').enableAksLogs, steps('activity').enableAppServiceLogs)]"
           }
         ]
       }
@@ -129,7 +181,14 @@
       "enableEntraRiskLogs": "[steps('entra').enableEntraRiskLogs]",
       "enableEntraGraphLogs": "[steps('entra').enableEntraGraphLogs]",
       "enableActivityPolicy": "[steps('activity').enableActivityPolicy]",
-      "managementGroupId": "[if(steps('activity').enableActivityPolicy, steps('activity').managementGroupId, '')]"
+      "managementGroupId": "[if(or(steps('activity').enableActivityPolicy, or(steps('activity').enableKeyVaultLogs, steps('activity').enableNsgLogs, steps('activity').enableFirewallLogs, steps('activity').enableAppGatewayLogs, steps('activity').enableAksLogs, steps('activity').enableAppServiceLogs)), steps('activity').managementGroupId, '')]",
+      "enableKeyVaultLogs": "[steps('activity').enableKeyVaultLogs]",
+      "enableNsgLogs": "[steps('activity').enableNsgLogs]",
+      "enableFirewallLogs": "[steps('activity').enableFirewallLogs]",
+      "enableAppGatewayLogs": "[steps('activity').enableAppGatewayLogs]",
+      "enableAksLogs": "[steps('activity').enableAksLogs]",
+      "enableAppServiceLogs": "[steps('activity').enableAppServiceLogs]",
+      "remediateExistingResources": "[if(or(steps('activity').enableKeyVaultLogs, steps('activity').enableNsgLogs, steps('activity').enableFirewallLogs, steps('activity').enableAppGatewayLogs, steps('activity').enableAksLogs, steps('activity').enableAppServiceLogs), steps('activity').remediateExistingResources, false)]"
     }
   }
 }
