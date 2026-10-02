@@ -241,7 +241,7 @@
             "visible": true,
             "options": {
               "icon": "Info",
-              "text": "The options below deploy an Azure Policy (DeployIfNotExists) at subscription scope that adds a diagnostic setting to every matching resource, now and in future. Existing resources are only fixed after a policy remediation task is run. All log categories are sent, which can be costly for NSGs and Firewalls. Needs Owner on the subscription."
+              "text": "The options below deploy an Azure Policy (DeployIfNotExists) that adds a diagnostic setting to every matching resource, now and in future. They apply to the subscription selected on the Basics tab, plus any extra subscription IDs you list at the bottom of this tab. To cover a whole management group, use the Tenant add-ons template instead. All log categories are sent, which can be costly for NSGs and Firewalls. Needs Owner on each subscription covered."
             }
           },
           {
@@ -279,6 +279,27 @@
             "type": "Microsoft.Common.CheckBox",
             "label": "App Service",
             "defaultValue": false
+          },
+          {
+            "name": "remediateExistingResources",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Fix existing resources now (creates remediation tasks)",
+            "defaultValue": true,
+            "visible": "[or(steps('azure').enableKeyVaultLogs, steps('azure').enableNsgLogs, steps('azure').enableFirewallLogs, steps('azure').enableAppGatewayLogs, steps('azure').enableAksLogs, steps('azure').enableAppServiceLogs)]",
+            "toolTip": "Without this, the policies only apply to newly created resources."
+          },
+          {
+            "name": "additionalSubscriptionIds",
+            "type": "Microsoft.Common.TextBox",
+            "label": "Additional subscription IDs (optional)",
+            "defaultValue": "",
+            "visible": "[or(steps('azure').enableAzureActivity, or(steps('azure').enableKeyVaultLogs, steps('azure').enableNsgLogs, steps('azure').enableFirewallLogs, steps('azure').enableAppGatewayLogs, steps('azure').enableAksLogs, steps('azure').enableAppServiceLogs))]",
+            "toolTip": "Comma-separated subscription GUIDs to cover as well. Do not include the subscription you are deploying into. You need Owner on each.",
+            "constraints": {
+              "required": false,
+              "regex": "^$|^[0-9a-fA-F-]{36}(\\s*,\\s*[0-9a-fA-F-]{36})*$",
+              "validationMessage": "Comma-separated subscription GUIDs, or leave empty"
+            }
           }
         ]
       },
@@ -493,7 +514,9 @@
       "awsS3RoleArn": "[if(steps('aws').enableAwsS3, steps('aws').awsS3RoleArn, '')]",
       "awsS3SqsUrl": "[if(steps('aws').enableAwsS3, steps('aws').awsS3SqsUrl, '')]",
       "awsS3Table": "[if(steps('aws').enableAwsS3, steps('aws').awsS3Table, 'AWSCloudTrail')]",
-      "enableDefenderXdrAlerts": "[and(steps('defender').enableDefenderXdr, steps('defender').enableDefenderXdrAlerts)]"
+      "enableDefenderXdrAlerts": "[and(steps('defender').enableDefenderXdr, steps('defender').enableDefenderXdrAlerts)]",
+      "remediateExistingResources": "[if(or(steps('azure').enableKeyVaultLogs, steps('azure').enableNsgLogs, steps('azure').enableFirewallLogs, steps('azure').enableAppGatewayLogs, steps('azure').enableAksLogs, steps('azure').enableAppServiceLogs), steps('azure').remediateExistingResources, false)]",
+      "additionalSubscriptionIds": "[if(or(steps('azure').enableAzureActivity, or(steps('azure').enableKeyVaultLogs, steps('azure').enableNsgLogs, steps('azure').enableFirewallLogs, steps('azure').enableAppGatewayLogs, steps('azure').enableAksLogs, steps('azure').enableAppServiceLogs)), steps('azure').additionalSubscriptionIds, '')]"
     }
   }
 }
