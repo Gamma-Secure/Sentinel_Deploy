@@ -496,9 +496,9 @@
                       },
                       "type": "Microsoft.Authorization/policyDefinitions",
                       "apiVersion": "2023-04-01",
-                      "name": "[format('sentinel-diag-{0}', parameters('sources')[copyIndex()].key)]",
+                      "name": "[format('gammasecure-diag-{0}-{0}', parameters('sources')[copyIndex()].key)]",
                       "properties": {
-                        "displayName": "[format('Sentinel: send {0} resource logs to Log Analytics', parameters('sources')[copyIndex()].label)]",
+                        "displayName": "[format('gammasecure send {0} resource logs to Log Analytics', parameters('sources')[copyIndex()].label)]",
                         "policyType": "Custom",
                         "mode": "Indexed",
                         "parameters": {
@@ -591,14 +591,14 @@
                       },
                       "type": "Microsoft.Authorization/policyAssignments",
                       "apiVersion": "2024-04-01",
-                      "name": "[format('sentinel-diag-{0}', parameters('sources')[copyIndex()].key)]",
+                      "name": "[format('gammasecure-diag-{0}-{0}', parameters('sources')[copyIndex()].key)]",
                       "location": "[parameters('location')]",
                       "identity": {
                         "type": "SystemAssigned"
                       },
                       "properties": {
-                        "displayName": "[format('Sentinel: {0} logs to Log Analytics', parameters('sources')[copyIndex()].label)]",
-                        "policyDefinitionId": "[extensionResourceId(managementGroup().id, 'Microsoft.Authorization/policyDefinitions', format('sentinel-diag-{0}', parameters('sources')[copyIndex()].key))]",
+                        "displayName": "[format('gammasecure {0} logs to Log Analytics', parameters('sources')[copyIndex()].label)]",
+                        "policyDefinitionId": "[extensionResourceId(managementGroup().id, 'Microsoft.Authorization/policyDefinitions', format('gammasecure-diag-{0}-{0}', parameters('sources')[copyIndex()].key))]",
                         "parameters": {
                           "logAnalytics": {
                             "value": "[parameters('workspaceId')]"
@@ -606,7 +606,7 @@
                         }
                       },
                       "dependsOn": [
-                        "[extensionResourceId(managementGroup().id, 'Microsoft.Authorization/policyDefinitions', format('sentinel-diag-{0}', parameters('sources')[copyIndex()].key))]"
+                        "[extensionResourceId(managementGroup().id, 'Microsoft.Authorization/policyDefinitions', format('gammasecure-diag-{0}-{0}', parameters('sources')[copyIndex()].key))]"
                       ]
                     },
                     {
@@ -619,11 +619,11 @@
                       "name": "[guid(managementGroup().id, parameters('sources')[copyIndex()].key, variables('monitoringContributor'))]",
                       "properties": {
                         "roleDefinitionId": "[tenantResourceId('Microsoft.Authorization/roleDefinitions', variables('monitoringContributor'))]",
-                        "principalId": "[reference(extensionResourceId(managementGroup().id, 'Microsoft.Authorization/policyAssignments', format('sentinel-diag-{0}', parameters('sources')[copyIndex()].key)), '2024-04-01', 'full').identity.principalId]",
+                        "principalId": "[reference(extensionResourceId(managementGroup().id, 'Microsoft.Authorization/policyAssignments', format('gammasecure-diag-{0}-{0}', parameters('sources')[copyIndex()].key)), '2024-04-01', 'full').identity.principalId]",
                         "principalType": "ServicePrincipal"
                       },
                       "dependsOn": [
-                        "[extensionResourceId(managementGroup().id, 'Microsoft.Authorization/policyAssignments', format('sentinel-diag-{0}', parameters('sources')[copyIndex()].key))]"
+                        "[extensionResourceId(managementGroup().id, 'Microsoft.Authorization/policyAssignments', format('gammasecure-diag-{0}-{0}', parameters('sources')[copyIndex()].key))]"
                       ]
                     },
                     {
@@ -636,11 +636,11 @@
                       "apiVersion": "2021-10-01",
                       "name": "[format('fix-{0}', parameters('sources')[copyIndex()].key)]",
                       "properties": {
-                        "policyAssignmentId": "[extensionResourceId(managementGroup().id, 'Microsoft.Authorization/policyAssignments', format('sentinel-diag-{0}', parameters('sources')[copyIndex()].key))]",
+                        "policyAssignmentId": "[extensionResourceId(managementGroup().id, 'Microsoft.Authorization/policyAssignments', format('gammasecure-diag-{0}-{0}', parameters('sources')[copyIndex()].key))]",
                         "resourceDiscoveryMode": "ReEvaluateCompliance"
                       },
                       "dependsOn": [
-                        "[extensionResourceId(managementGroup().id, 'Microsoft.Authorization/policyAssignments', format('sentinel-diag-{0}', parameters('sources')[copyIndex()].key))]",
+                        "[extensionResourceId(managementGroup().id, 'Microsoft.Authorization/policyAssignments', format('gammasecure-diag-{0}-{0}', parameters('sources')[copyIndex()].key))]",
                         "monitoringRoles",
                         "workspaceRoles"
                       ]
@@ -662,7 +662,7 @@
                         "mode": "Incremental",
                         "parameters": {
                           "principalId": {
-                            "value": "[reference(extensionResourceId(managementGroup().id, 'Microsoft.Authorization/policyAssignments', format('sentinel-diag-{0}', parameters('sources')[copyIndex()].key)), '2024-04-01', 'full').identity.principalId]"
+                            "value": "[reference(extensionResourceId(managementGroup().id, 'Microsoft.Authorization/policyAssignments', format('gammasecure-diag-{0}-{0}', parameters('sources')[copyIndex()].key)), '2024-04-01', 'full').identity.principalId]"
                           }
                         },
                         "template": {
@@ -698,7 +698,7 @@
                         }
                       },
                       "dependsOn": [
-                        "[extensionResourceId(managementGroup().id, 'Microsoft.Authorization/policyAssignments', format('sentinel-diag-{0}', parameters('sources')[copyIndex()].key))]"
+                        "[extensionResourceId(managementGroup().id, 'Microsoft.Authorization/policyAssignments', format('gammasecure-diag-{0}-{0}', parameters('sources')[copyIndex()].key))]"
                       ]
                     }
                   ],
@@ -707,7 +707,7 @@
                       "type": "array",
                       "copy": {
                         "count": "[length(parameters('sources'))]",
-                        "input": "[format('sentinel-diag-{0}', parameters('sources')[copyIndex()].key)]"
+                        "input": "[format('gammasecure-diag-{0}-{0}', parameters('sources')[copyIndex()].key)]"
                       }
                     }
                   }
