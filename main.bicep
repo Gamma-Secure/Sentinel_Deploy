@@ -45,12 +45,20 @@ param awsS3SqsUrl string = ''
 param awsS3Table string = 'AWSCloudTrail'
 
 // Azure resource logs (deployed as Azure Policy, covers existing + new resources)
+param remediateExistingResources bool = true
+@description('Optional: comma-separated IDs of OTHER subscriptions to cover (Activity + resource log policies). Do not list the subscription you deploy into.')
+param additionalSubscriptionIds string = ''
 param enableKeyVaultLogs bool = false
 param enableNsgLogs bool = false
 param enableFirewallLogs bool = false
 param enableAppGatewayLogs bool = false
 param enableAksLogs bool = false
 param enableAppServiceLogs bool = false
+
+// Detection foundations
+param enableHealthDiagnostics bool = true
+param enableAnomalies bool = true
+param enableUeba bool = false
 
 param tags object = {}
 
@@ -64,6 +72,8 @@ var activityCategories = [
   'Autoscale'
   'ResourceHealth'
 ]
+
+var additionalSubs = empty(additionalSubscriptionIds) ? [] : split(replace(additionalSubscriptionIds, ' ', ''), ',')
 
 var selectedResourceSources = concat(
   enableKeyVaultLogs ? [ { key: 'keyvault', label: 'Key Vault', resourceType: 'Microsoft.KeyVault/vaults' } ] : [],
@@ -115,6 +125,9 @@ module sentinel 'sentinel.bicep' = {
     awsS3RoleArn: awsS3RoleArn
     awsS3SqsUrl: awsS3SqsUrl
     awsS3Table: awsS3Table
+    enableHealthDiagnostics: enableHealthDiagnostics
+    enableAnomalies: enableAnomalies
+    enableUeba: enableUeba
     tags: tags
   }
 }
@@ -137,9 +150,34 @@ module resourceLogs 'resource-diagnostics-policy.bicep' = if (!empty(selectedRes
   params: {
     location: location
     workspaceId: sentinel.outputs.workspaceId
+    workspaceSubscriptionId: subscription().subscriptionId
+    workspaceResourceGroup: resourceGroupName
     sources: selectedResourceSources
+    remediateExisting: remediateExistingResources
   }
 }
+
+// ---- Additional subscriptions (per-subscription coverage) ----
+module activityOther 'activity-diag.bicep' = [for subId in additionalSubs: if (enableAzureActivity) {
+  name: 'sentinel-activity-${subId}'
+  scope: subscription(subId)
+  params: {
+    workspaceId: sentinel.outputs.workspaceId
+  }
+}]
+
+module resourceLogsOther 'resource-diagnostics-policy.bicep' = [for subId in additionalSubs: if (!empty(selectedResourceSources)) {
+  name: 'sentinel-resource-diagnostics-${subId}'
+  scope: subscription(subId)
+  params: {
+    location: location
+    workspaceId: sentinel.outputs.workspaceId
+    workspaceSubscriptionId: subscription().subscriptionId
+    workspaceResourceGroup: resourceGroupName
+    sources: selectedResourceSources
+    remediateExisting: remediateExistingResources
+  }
+}]
 
 output workspaceId string = sentinel.outputs.workspaceId
 output workspaceName string = workspaceName

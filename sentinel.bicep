@@ -6,6 +6,11 @@ param tenantId string
 param subscriptionId string
 param tags object
 
+// Detection foundations
+param enableHealthDiagnostics bool
+param enableAnomalies bool
+param enableUeba bool
+
 // Microsoft Defender
 param enableDefenderXdr bool
 param enableDefenderXdrAlerts bool
@@ -55,6 +60,49 @@ resource onboard 'Microsoft.SecurityInsights/onboardingStates@2024-03-01' = {
   name: 'default'
   scope: law
   properties: {}
+}
+
+// ---------- Detection foundations ----------
+
+resource healthDiag 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = if (enableHealthDiagnostics) {
+  name: 'sentinel-health'
+  scope: law
+  dependsOn: [ onboard ]
+  properties: {
+    workspaceId: law.id
+    logs: [
+      { category: 'SentinelHealth', enabled: true }
+      { category: 'SentinelAudit', enabled: true }
+    ]
+  }
+}
+
+resource anomalies 'Microsoft.SecurityInsights/settings@2025-07-01-preview' = if (enableAnomalies) {
+  name: 'Anomalies'
+  scope: law
+  kind: 'Anomalies'
+  dependsOn: [ onboard ]
+  properties: {}
+}
+
+resource entityAnalytics 'Microsoft.SecurityInsights/settings@2025-07-01-preview' = if (enableUeba) {
+  name: 'EntityAnalytics'
+  scope: law
+  kind: 'EntityAnalytics'
+  dependsOn: [ onboard ]
+  properties: {
+    entityProviders: [ 'AzureActiveDirectory' ]
+  }
+}
+
+resource ueba 'Microsoft.SecurityInsights/settings@2025-07-01-preview' = if (enableUeba) {
+  name: 'Ueba'
+  scope: law
+  kind: 'Ueba'
+  dependsOn: [ onboard, entityAnalytics ]
+  properties: {
+    dataSources: [ 'AuditLogs', 'AzureActivity', 'SigninLogs' ]
+  }
 }
 
 // ---------- Stable API (2025-09-01) ----------

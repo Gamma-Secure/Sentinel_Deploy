@@ -386,6 +386,51 @@
         ]
       },
       {
+        "name": "detections",
+        "label": "Detections",
+        "elements": [
+          {
+            "name": "dNote",
+            "type": "Microsoft.Common.InfoBox",
+            "visible": true,
+            "options": {
+              "icon": "Info",
+              "text": "Foundations that detections and troubleshooting rely on. Analytics rules and Content hub solutions are not deployed here: rules fail to create if the table they query doesn't exist yet, so deploy them after data is flowing (see the content repo)."
+            }
+          },
+          {
+            "name": "enableHealthDiagnostics",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Sentinel health and audit logging (SentinelHealth, SentinelAudit tables)",
+            "defaultValue": true,
+            "toolTip": "Records connector, rule and automation health, and who changed what. Low volume."
+          },
+          {
+            "name": "enableAnomalies",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Anomaly detection rules (built-in ML anomalies)",
+            "defaultValue": true,
+            "toolTip": "Turns on Sentinel's anomaly rules so they are available to use."
+          },
+          {
+            "name": "enableUeba",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "User and entity behavior analytics (UEBA) with Entra ID",
+            "defaultValue": false,
+            "toolTip": "Builds user and entity profiles from Entra and Azure activity. Enabling it can need an Entra Security Administrator or Global Administrator, so leave it off if you don't have that role."
+          },
+          {
+            "name": "uebaNote",
+            "type": "Microsoft.Common.InfoBox",
+            "visible": "[steps('detections').enableUeba]",
+            "options": {
+              "icon": "Warning",
+              "text": "UEBA uses Entra sign-in and audit logs and Azure Activity, so it only produces results once those are connected. Enabling it may add ingestion cost."
+            }
+          }
+        ]
+      },
+      {
         "name": "aws",
         "label": "AWS",
         "elements": [
@@ -516,7 +561,10 @@
       "awsS3Table": "[if(steps('aws').enableAwsS3, steps('aws').awsS3Table, 'AWSCloudTrail')]",
       "enableDefenderXdrAlerts": "[and(steps('defender').enableDefenderXdr, steps('defender').enableDefenderXdrAlerts)]",
       "remediateExistingResources": "[if(or(steps('azure').enableKeyVaultLogs, steps('azure').enableNsgLogs, steps('azure').enableFirewallLogs, steps('azure').enableAppGatewayLogs, steps('azure').enableAksLogs, steps('azure').enableAppServiceLogs), steps('azure').remediateExistingResources, false)]",
-      "additionalSubscriptionIds": "[if(or(steps('azure').enableAzureActivity, or(steps('azure').enableKeyVaultLogs, steps('azure').enableNsgLogs, steps('azure').enableFirewallLogs, steps('azure').enableAppGatewayLogs, steps('azure').enableAksLogs, steps('azure').enableAppServiceLogs)), steps('azure').additionalSubscriptionIds, '')]"
+      "additionalSubscriptionIds": "[if(or(steps('azure').enableAzureActivity, or(steps('azure').enableKeyVaultLogs, steps('azure').enableNsgLogs, steps('azure').enableFirewallLogs, steps('azure').enableAppGatewayLogs, steps('azure').enableAksLogs, steps('azure').enableAppServiceLogs)), steps('azure').additionalSubscriptionIds, '')]",
+      "enableHealthDiagnostics": "[steps('detections').enableHealthDiagnostics]",
+      "enableAnomalies": "[steps('detections').enableAnomalies]",
+      "enableUeba": "[steps('detections').enableUeba]"
     }
   }
 }

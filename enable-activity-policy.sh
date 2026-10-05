@@ -13,4 +13,4 @@ RG_ID="${WS_ID%/providers/*}"
 az role assignment create --assignee-object-id "$OUT" --assignee-principal-type ServicePrincipal \
   --role "Log Analytics Contributor" --scope "$RG_ID"
 echo "Done. After ~30 min, remediate existing subscriptions:"
-echo "az policy remediation create -n activity-fix --management-group $MG --policy-assignment sentinel-activity-logs"
+echo "az policy remediation create -n activity-fix --management-group $MG --policy-assignment gammasecure-activity"

@@ -1,9 +1,10 @@
-targetScope = 'subscription'
+// Management-group scope: same policies as resource-diagnostics-policy.bicep, covering every subscription in the group.
+targetScope = 'managementGroup'
 
 param location string
 param workspaceId string
 @description('Prefix for policy definition, assignment and remediation names (MG assignment names are limited to 24 characters)')
-param namePrefix string = 'gammasecure-sentinel'
+param namePrefix string = 'gammasecure'
 param workspaceSubscriptionId string
 param workspaceResourceGroup string
 @description('Array of { key, label, resourceType }')
@@ -103,9 +104,9 @@ resource assigns 'Microsoft.Authorization/policyAssignments@2024-04-01' = [for (
 
 // Monitoring Contributor over the scope the policy applies to (to write diagnostic settings)
 resource monitoringRoles 'Microsoft.Authorization/roleAssignments@2022-04-01' = [for (s, i) in sources: {
-  name: guid(subscription().id, s.key, monitoringContributor)
+  name: guid(managementGroup().id, s.key, monitoringContributor)
   properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', monitoringContributor)
+    roleDefinitionId: tenantResourceId('Microsoft.Authorization/roleDefinitions', monitoringContributor)
     principalId: assigns[i].identity.principalId
     principalType: 'ServicePrincipal'
   }
@@ -113,7 +114,7 @@ resource monitoringRoles 'Microsoft.Authorization/roleAssignments@2022-04-01' = 
 
 // Log Analytics Contributor only on the workspace's resource group (works across subscriptions)
 module workspaceRoles 'workspace-role.bicep' = [for (s, i) in sources: {
-  name: 'wsrole-${s.key}-${uniqueString(subscription().id)}'
+  name: 'wsrole-${s.key}-${uniqueString(managementGroup().id)}'
   scope: resourceGroup(workspaceSubscriptionId, workspaceResourceGroup)
   params: {
     principalId: assigns[i].identity.principalId
